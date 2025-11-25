@@ -1,0 +1,92 @@
+<?php
+
+namespace App\Services;
+
+use App\Enums\CompanyStatus;
+use App\Enums\OrderStatus;
+use App\Models\Company;
+use App\Models\Order;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class CompanyFormationService
+{
+    public function initiateFormation(Order $order, array $companyData): Company
+    {
+        return DB::transaction(function () use ($order, $companyData) {
+            $company = Company::create([
+                'user_id' => $order->user_id,
+                'order_id' => $order->id,
+                'name' => $companyData['name'],
+                'type' => $companyData['type'],
+                'country_id' => $companyData['country_id'],
+                'state_id' => $companyData['state_id'] ?? null,
+                'status' => CompanyStatus::PENDING,
+            ]);
+            
+            if (isset($companyData['owners'])) {
+                foreach ($companyData['owners'] as $ownerData) {
+                    $company->owners()->create($ownerData);
+                }
+            }
+            
+            if (isset($companyData['addresses'])) {
+                foreach ($companyData['addresses'] as $addressData) {
+                    $company->addresses()->create($addressData);
+                }
+            }
+            
+            $order->update([
+                'company_id' => $company->id,
+                'status' => OrderStatus::PROCESSING,
+            ]);
+            
+            return $company;
+        });
+    }
+    
+    public function processFormation(Company $company): void
+    {
+        DB::transaction(function () use ($company) {
+            $company->update(['status' => CompanyStatus::PROCESSING]);
+            
+            // Simulate formation process
+            // In real implementation, this would integrate with external services
+            Log::info("Processing company formation for company ID: {$company->id}");
+            
+            // This would typically be done via a queue job
+            // For now, we'll just mark it as processing
+        });
+    }
+    
+    public function generateEIN(Company $company): ?string
+    {
+        // In real implementation, this would integrate with IRS API or service
+        // For now, return a placeholder
+        $ein = '12-' . str_pad(rand(1000000, 9999999), 7, '0', STR_PAD_LEFT);
+        
+        $company->update(['ein' => $ein]);
+        
+        return $ein;
+    }
+    
+    public function completeFormation(Company $company, array $data = []): void
+    {
+        DB::transaction(function () use ($company, $data) {
+            $company->update([
+                'status' => CompanyStatus::FORMED,
+                'registration_number' => $data['registration_number'] ?? null,
+                'ein' => $data['ein'] ?? $company->ein,
+                'formed_at' => now(),
+            ]);
+            
+            if ($company->order) {
+                $company->order->update([
+                    'status' => OrderStatus::COMPLETED,
+                    'completed_at' => now(),
+                ]);
+            }
+        });
+    }
+}
+

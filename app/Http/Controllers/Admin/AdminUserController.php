@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class AdminUserController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $users = User::with('profile')
+            ->latest()
+            ->paginate(20);
+
+        return response()->json(UserResource::collection($users));
+    }
+
+    public function show($id): JsonResponse
+    {
+        $user = User::with('profile')->findOrFail($id);
+
+        return response()->json(new UserResource($user));
+    }
+
+    public function update(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $id,
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->update($request->only(['name', 'email', 'is_active']));
+
+        return response()->json(new UserResource($user->load('profile')));
+    }
+
+    public function deactivate($id): JsonResponse
+    {
+        $user = User::findOrFail($id);
+        $user->update(['is_active' => false]);
+
+        return response()->json(['message' => 'User deactivated successfully']);
+    }
+}

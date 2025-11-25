@@ -1,0 +1,71 @@
+<?php
+
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\MarketplaceController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ReferralController;
+use App\Http\Controllers\Api\SupportController;
+use App\Http\Controllers\Api\UserController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('v1')->group(function () {
+    // Public routes
+    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/login', [AuthController::class, 'login']);
+
+    // Protected routes
+    Route::middleware('auth:sanctum')->group(function () {
+        // Authentication
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
+        Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+
+        // User
+        Route::get('/user', [UserController::class, 'show']);
+        Route::put('/user', [UserController::class, 'update']);
+        Route::post('/user/change-password', [UserController::class, 'changePassword']);
+
+        // Orders
+        Route::get('/orders', [OrderController::class, 'index']);
+        Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle.orders');
+        Route::get('/orders/{id}', [OrderController::class, 'show']);
+        Route::post('/orders/{id}/apply-promo-code', [OrderController::class, 'applyPromoCode']);
+        Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+
+        // Companies
+        Route::get('/companies', [CompanyController::class, 'index']);
+        Route::post('/companies', [CompanyController::class, 'store']);
+        Route::get('/companies/{id}', [CompanyController::class, 'show']);
+        Route::put('/companies/{id}', [CompanyController::class, 'update']);
+
+        // Marketplace
+        Route::get('/marketplace/services', [MarketplaceController::class, 'index']);
+        Route::get('/marketplace/services/{id}', [MarketplaceController::class, 'show']);
+        Route::post('/marketplace/order', [MarketplaceController::class, 'order']);
+
+        // Payments
+        Route::post('/payments/process', [PaymentController::class, 'process']);
+        Route::get('/payments/{id}', [PaymentController::class, 'show']);
+        Route::post('/payments/refund', [PaymentController::class, 'refund']);
+
+        // Referrals
+        Route::post('/referrals/register', [ReferralController::class, 'register']);
+        Route::get('/referrals/dashboard', [ReferralController::class, 'dashboard']);
+        Route::get('/referrals/commissions', [ReferralController::class, 'commissions']);
+
+        // Support
+        Route::get('/support/tickets', [SupportController::class, 'index']);
+        Route::post('/support/tickets', [SupportController::class, 'store']);
+        Route::get('/support/tickets/{id}', [SupportController::class, 'show']);
+        Route::post('/support/tickets/{id}/reply', [SupportController::class, 'reply']);
+
+        // Notifications
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    });
+});
