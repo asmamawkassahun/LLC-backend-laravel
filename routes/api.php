@@ -15,11 +15,18 @@ Route::prefix('v1')->group(function () {
     // Public routes
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+    
+    // Email verification route (public, but signed)
+    Route::get('/auth/verify-email/{id}/{hash}', [AuthController::class, 'verify'])
+        ->middleware(['signed'])
+        ->name('verification.verify');
 
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
         // Authentication
         Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
         Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
