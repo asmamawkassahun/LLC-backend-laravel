@@ -34,21 +34,9 @@ class OrderController extends Controller
     {
         $order = $this->orderService->createOrder($request->validated(), $request->user());
 
-        if ($request->type === 'company_formation') {
-            $companyData = [
-                'name' => $request->company_name,
-                'type' => $request->company_type,
-                'country_id' => $request->country_id,
-                'state_id' => $request->state_id,
-                'owners' => $request->owners ?? [],
-                'addresses' => $request->addresses ?? [],
-            ];
-            $this->companyFormationService->initiateFormation($order, $companyData);
-        }
-
         $this->notificationService->sendOrderNotification($order, 'order_created');
 
-        return response()->json(new OrderResource($order->load(['country', 'pricingPlan', 'company'])), 201);
+        return response()->json(new OrderResource($order->load(['country', 'pricingPlan', 'company', 'state'])), 201);
     }
 
     public function show(Request $request, $id): JsonResponse

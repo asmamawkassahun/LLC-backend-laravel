@@ -35,7 +35,7 @@ class AuthController extends Controller
         $refreshToken = $user->createToken(
             'refresh-token',
             ['refresh'],
-            now()->addDays(7)
+            now()->addDays(1)
         );
 
         return [

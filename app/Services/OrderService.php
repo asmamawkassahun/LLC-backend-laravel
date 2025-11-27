@@ -2,7 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\CompanyStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Models\Company;
+use App\Models\CompanyAddress;
+use App\Models\CompanyOwner;
+use App\Models\Country;
 use App\Models\Order;
 use App\Models\PricingPlan;
 use App\Models\PromoCode;
@@ -15,18 +21,90 @@ class OrderService
     public function createOrder(array $data, $user): Order
     {
         return DB::transaction(function () use ($data, $user) {
-            $orderNumber = $this->generateOrderNumber();
-            
-            $pricingPlan = PricingPlan::findOrFail($data['pricing_plan_id']);
-            $stateFee = 0;
-            
-            if (isset($data['state_id'])) {
-                $state = State::findOrFail($data['state_id']);
-                $stateFee = $state->formation_fee;
+            // Step 1: Country Storage
+            $countryName = $data['plan'][0]['countryName'] ?? null;
+            if (!$countryName) {
+                throw new \Exception('Country name is required');
             }
             
-            $basePrice = $pricingPlan->base_price;
-            $subtotal = $basePrice + $stateFee;
+            $country = Country::where('name', $countryName)->first();
+            if (!$country) {
+                $country = Country::create([
+                    'name' => $countryName,
+                    'is_active' => true,
+                ]);
+            }
+            $countryId = $country->id;
+            
+            // Step 2: State Storage
+            $stateId = null;
+            $state = null;
+            if (isset($data['state']['name']) && !empty($data['state']['name'])) {
+                $stateName = $data['state']['name'];
+                $stateCost = $data['state']['cost'] ?? 0;
+                
+                $state = State::where('country_id', $countryId)
+                    ->where('name', $stateName)
+                    ->first();
+                
+                if (!$state) {
+                    $state = State::create([
+                        'country_id' => $countryId,
+                        'name' => $stateName,
+                        'formation_fee' => $stateCost,
+                        'code' => null,
+                        'is_active' => null,
+                    ]);
+                }
+                $stateId = $state->id;
+            }
+            
+            // Step 3: Pricing Plan Storage
+            $pricingPlanName = $data['plan'][0]['pricingPlan'] ?? null;
+            $basePrice = $data['plan'][0]['basePrice'] ?? 0;
+            $yearlyPrice = $data['plan'][0]['yearlyPrice'] ?? 0;
+            
+            if (!$pricingPlanName) {
+                throw new \Exception('Pricing plan name is required');
+            }
+            
+            $pricingPlan = PricingPlan::where('country_id', $countryId)
+                ->where('name', $pricingPlanName)
+                ->first();
+            
+            if (!$pricingPlan) {
+                $pricingPlan = PricingPlan::create([
+                    'country_id' => $countryId,
+                    'name' => $pricingPlanName,
+                    'base_price' => $basePrice,
+                    'yearly_price' => $yearlyPrice,
+                    'slug' => null,
+                    'features' => null,
+                    'type' => null,
+                    'is_active' => true,
+                ]);
+            }
+            $pricingPlanId = $pricingPlan->id;
+            
+            // Step 4: Company Storage
+            $company = Company::create([
+                'user_id' => $user->id,
+                'order_id' => null, // Will be updated after order creation
+                'name' => $data['company_name'],
+                'type' => $data['company_type'],
+                'country_id' => $countryId,
+                'state_id' => $stateId,
+                'status' => CompanyStatus::PENDING,
+            ]);
+            $companyId = $company->id;
+            
+            // Step 5: Order Storage
+            $orderNumber = $this->generateOrderNumber();
+            
+            // Calculate totals from relationships
+            $basePriceValue = $pricingPlan->base_price;
+            $stateFee = $state ? ($state->formation_fee ?? 0) : 0;
+            $subtotal = $basePriceValue + $stateFee;
             $discountAmount = 0;
             
             if (isset($data['promo_code'])) {
@@ -43,20 +121,54 @@ class OrderService
             $order = Order::create([
                 'user_id' => $user->id,
                 'order_number' => $orderNumber,
-                'type' => $data['type'],
-                'country_id' => $data['country_id'] ?? null,
-                'pricing_plan_id' => $data['pricing_plan_id'] ?? null,
-                'state_id' => $data['state_id'] ?? null,
-                'state_fee' => $stateFee,
-                'base_price' => $basePrice,
+                'type' => $data['type'] ?? 'company_formation',
+                'country_id' => $countryId,
+                'pricing_plan_id' => $pricingPlanId,
+                'state_id' => $stateId,
+                'company_id' => $companyId,
                 'discount_amount' => $discountAmount,
                 'promo_code_id' => $promoCode->id ?? null,
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
                 'total_amount' => $totalAmount,
                 'status' => OrderStatus::DRAFT,
+                'payment_status' => PaymentStatus::UNPAID,
                 'metadata' => $data['metadata'] ?? [],
             ]);
+            
+            // Step 6: Update company with order_id
+            $company->update(['order_id' => $order->id]);
+            
+            // Step 7: Company Address and Owner Storage
+            if (isset($data['owners']) && is_array($data['owners'])) {
+                foreach ($data['owners'] as $ownerData) {
+                    CompanyOwner::create([
+                        'company_id' => $companyId,
+                        'full_name' => $ownerData['full_name'] ?? '',
+                        'ownership_percentage' => $ownerData['ownership_percentage'] ?? 0,
+                        'is_company' => $ownerData['is_company'] ?? false,
+                        'ssn_or_itin' => $ownerData['ssn_or_itin'] ?? null,
+                        'email' => $ownerData['email'] ?? null,
+                        'phone' => $ownerData['phone'] ?? null,
+                        'address' => $ownerData['address'] ?? null,
+                    ]);
+                }
+            }
+            
+            if (isset($data['addresses']) && is_array($data['addresses'])) {
+                foreach ($data['addresses'] as $addressData) {
+                    CompanyAddress::create([
+                        'company_id' => $companyId,
+                        'type' => $addressData['type'] ?? 'registered',
+                        'street_address' => $addressData['street_address'] ?? '',
+                        'city' => $addressData['city'] ?? '',
+                        'state' => $addressData['state'] ?? '',
+                        'zip_code' => $addressData['zip_code'] ?? '',
+                        'country' => $addressData['country'] ?? '',
+                        'is_active' => true,
+                    ]);
+                }
+            }
             
             return $order;
         });
@@ -64,7 +176,12 @@ class OrderService
     
     public function calculateTotal(Order $order): array
     {
-        $subtotal = $order->base_price + $order->state_fee - $order->discount_amount;
+        // Load relationships if not already loaded
+        $order->loadMissing(['pricingPlan', 'state']);
+        
+        $basePrice = $order->pricingPlan->base_price ?? 0;
+        $stateFee = $order->state->formation_fee ?? 0;
+        $subtotal = $basePrice + $stateFee - $order->discount_amount;
         $taxAmount = $order->tax_amount;
         $totalAmount = $subtotal + $taxAmount;
         

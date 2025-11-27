@@ -19,8 +19,6 @@ class Order extends Model
         'pricing_plan_id',
         'company_id',
         'state_id',
-        'state_fee',
-        'base_price',
         'discount_amount',
         'promo_code_id',
         'subtotal',
@@ -41,8 +39,6 @@ class Order extends Model
     protected function casts(): array
     {
         return [
-            'state_fee' => 'decimal:2',
-            'base_price' => 'decimal:2',
             'discount_amount' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'tax_amount' => 'decimal:2',
