@@ -25,6 +25,8 @@ class CreateOrderRequest extends FormRequest
             'state.cost' => ['nullable', 'numeric', 'min:0'],
             'company_name' => ['required_if:type,company_formation', 'string', 'max:255'],
             'company_type' => ['required_if:type,company_formation', 'in:LLC,LTD,CORP'],
+            'category' => ['nullable', 'array'],
+            'category.*' => ['string', 'max:255'],
             'owners' => ['nullable', 'array'],
             'owners.*.full_name' => ['required_with:owners', 'string', 'max:255'],
             'owners.*.ownership_percentage' => ['required_with:owners', 'numeric', 'min:0', 'max:100'],

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\ApplyPromoCodeRequest;
 use App\Http\Requests\Order\CreateOrderRequest;
+use App\Http\Requests\Order\UpdateOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Services\CompanyFormationService;
 use App\Services\NotificationService;
@@ -51,10 +52,40 @@ class OrderController extends Controller
     public function show(Request $request, $id): JsonResponse
     {
         $order = $request->user()->orders()
-            ->with(['country', 'pricingPlan', 'company', 'state', 'payments'])
+            ->with([
+                'country',
+                'pricingPlan',
+                'company',
+                'company.owners',
+                'company.addresses',
+                'company.country',
+                'company.state',
+                'state',
+                'payments'
+            ])
             ->findOrFail($id);
 
         return response()->json(new OrderResource($order));
+    }
+
+    public function update(UpdateOrderRequest $request, $id): JsonResponse
+    {
+        $order = $request->user()->orders()->findOrFail($id);
+        
+        $updatedOrder = $this->orderService->updateOrder($order, $request->validated(), $request->user());
+
+        $this->notificationService->sendOrderNotification($updatedOrder, 'order_updated');
+
+        return response()->json(new OrderResource($updatedOrder->load([
+            'country',
+            'pricingPlan',
+            'company',
+            'company.owners',
+            'company.addresses',
+            'company.country',
+            'company.state',
+            'state'
+        ])));
     }
 
     public function applyPromoCode(ApplyPromoCodeRequest $request, $id): JsonResponse

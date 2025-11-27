@@ -15,6 +15,7 @@ class Company extends Model
         'order_id',
         'name',
         'type',
+        'category',
         'country_id',
         'state_id',
         'registration_number',
@@ -32,6 +33,7 @@ class Company extends Model
             'status' => CompanyStatus::class,
             'formed_at' => 'datetime',
             'is_primary' => 'boolean',
+            'category' => 'array',
         ];
     }
 

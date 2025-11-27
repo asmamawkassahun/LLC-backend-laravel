@@ -95,6 +95,7 @@ class OrderService
                 'order_id' => null, // Will be updated after order creation
                 'name' => $data['company_name'],
                 'type' => $data['company_type'],
+                'category' => $data['category'] ?? [],
                 'country_id' => $countryId,
                 'state_id' => $stateId,
                 'status' => CompanyStatus::PENDING,
@@ -174,6 +175,214 @@ class OrderService
                 }
             }
             
+            return $order;
+        });
+    }
+
+    public function updateOrder(Order $order, array $data, $user): Order
+    {
+        return DB::transaction(function () use ($order, $data, $user) {
+            // Load existing relationships
+            $order->load(['country', 'pricingPlan', 'company', 'state']);
+
+            // Step 1: Country Storage/Update
+            $countryName = $data['plan'][0]['countryName'] ?? null;
+            if ($countryName) {
+                $country = Country::where('name', $countryName)->first();
+                if (!$country) {
+                    $country = Country::create([
+                        'name' => $countryName,
+                        'is_active' => true,
+                    ]);
+                }
+                $countryId = $country->id;
+            } else {
+                $countryId = $order->country_id;
+            }
+
+            // Step 2: State Storage/Update
+            $stateId = null;
+            $state = null;
+            if (isset($data['state']['name']) && !empty($data['state']['name'])) {
+                $stateName = $data['state']['name'];
+                $stateCost = $data['state']['cost'] ?? 0;
+
+                $state = State::where('country_id', $countryId)
+                    ->where('name', $stateName)
+                    ->first();
+
+                if (!$state) {
+                    $state = State::create([
+                        'country_id' => $countryId,
+                        'name' => $stateName,
+                        'formation_fee' => $stateCost,
+                        'code' => null,
+                        'is_active' => null,
+                    ]);
+                } else {
+                    // Update formation fee if changed
+                    if ($state->formation_fee != $stateCost) {
+                        $state->update(['formation_fee' => $stateCost]);
+                    }
+                }
+                $stateId = $state->id;
+            } else {
+                $stateId = $order->state_id;
+                $state = $order->state;
+            }
+
+            // Step 3: Pricing Plan Storage/Update
+            $pricingPlanName = $data['plan'][0]['pricingPlan'] ?? null;
+            $basePrice = $data['plan'][0]['basePrice'] ?? 0;
+            $yearlyPrice = $data['plan'][0]['yearlyPrice'] ?? 0;
+
+            if ($pricingPlanName) {
+                $pricingPlan = PricingPlan::where('country_id', $countryId)
+                    ->where('name', $pricingPlanName)
+                    ->first();
+
+                if (!$pricingPlan) {
+                    $pricingPlan = PricingPlan::create([
+                        'country_id' => $countryId,
+                        'name' => $pricingPlanName,
+                        'base_price' => $basePrice,
+                        'yearly_price' => $yearlyPrice,
+                        'slug' => null,
+                        'features' => null,
+                        'type' => null,
+                        'is_active' => true,
+                    ]);
+                } else {
+                    // Update prices if changed
+                    $updateData = [];
+                    if ($pricingPlan->base_price != $basePrice) {
+                        $updateData['base_price'] = $basePrice;
+                    }
+                    if ($pricingPlan->yearly_price != $yearlyPrice) {
+                        $updateData['yearly_price'] = $yearlyPrice;
+                    }
+                    if (!empty($updateData)) {
+                        $pricingPlan->update($updateData);
+                    }
+                }
+                $pricingPlanId = $pricingPlan->id;
+            } else {
+                $pricingPlanId = $order->pricing_plan_id;
+                $pricingPlan = $order->pricingPlan;
+            }
+
+            // Step 4: Company Update
+            if ($order->company) {
+                $companyUpdateData = [];
+                if (isset($data['company_name'])) {
+                    $companyUpdateData['name'] = $data['company_name'];
+                }
+                if (isset($data['company_type'])) {
+                    $companyUpdateData['type'] = $data['company_type'];
+                }
+                if (isset($data['category'])) {
+                    $companyUpdateData['category'] = $data['category'];
+                }
+                if ($order->company->country_id != $countryId) {
+                    $companyUpdateData['country_id'] = $countryId;
+                }
+                if ($order->company->state_id != $stateId) {
+                    $companyUpdateData['state_id'] = $stateId;
+                }
+
+                if (!empty($companyUpdateData)) {
+                    $order->company->update($companyUpdateData);
+                }
+            }
+
+            // Step 5: Update Company Owners (delete old, create new)
+            if (isset($data['owners']) && is_array($data['owners'])) {
+                if ($order->company) {
+                    // Delete existing owners
+                    $order->company->owners()->delete();
+
+                    // Create new owners
+                    foreach ($data['owners'] as $ownerData) {
+                        CompanyOwner::create([
+                            'company_id' => $order->company->id,
+                            'full_name' => $ownerData['full_name'] ?? '',
+                            'ownership_percentage' => $ownerData['ownership_percentage'] ?? 0,
+                            'is_company' => $ownerData['is_company'] ?? false,
+                            'ssn_or_itin' => $ownerData['ssn_or_itin'] ?? null,
+                            'email' => $ownerData['email'] ?? null,
+                            'phone' => $ownerData['phone'] ?? null,
+                            'address' => $ownerData['address'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Step 6: Update Company Addresses (delete old, create new)
+            if (isset($data['addresses']) && is_array($data['addresses'])) {
+                if ($order->company) {
+                    // Delete existing addresses
+                    $order->company->addresses()->delete();
+
+                    // Create new addresses
+                    foreach ($data['addresses'] as $addressData) {
+                        CompanyAddress::create([
+                            'company_id' => $order->company->id,
+                            'type' => $addressData['type'] ?? 'registered',
+                            'street_address' => $addressData['street_address'] ?? '',
+                            'city' => $addressData['city'] ?? '',
+                            'state' => $addressData['state'] ?? '',
+                            'zip_code' => $addressData['zip_code'] ?? '',
+                            'country' => $addressData['country'] ?? '',
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+            }
+
+            // Step 7: Update Order
+            // Reload pricing plan and state to get updated values
+            $pricingPlan = PricingPlan::find($pricingPlanId);
+            $state = $stateId ? State::find($stateId) : null;
+
+            $basePriceValue = $pricingPlan->base_price ?? 0;
+            $stateFee = $state ? ($state->formation_fee ?? 0) : 0;
+            $subtotal = $basePriceValue + $stateFee;
+            $discountAmount = $order->discount_amount; // Preserve existing discount
+
+            // Handle promo code if provided
+            if (isset($data['promo_code'])) {
+                $promoCode = PromoCode::where('code', $data['promo_code'])->first();
+                if ($promoCode && $this->isPromoCodeValid($promoCode, $subtotal)) {
+                    $discountAmount = $this->calculateDiscount($promoCode, $subtotal);
+                    $subtotal -= $discountAmount;
+                }
+            } else {
+                $subtotal -= $discountAmount;
+            }
+
+            $taxAmount = $order->tax_amount; // Preserve existing tax
+            $totalAmount = $subtotal + $taxAmount;
+
+            $orderUpdateData = [
+                'country_id' => $countryId,
+                'pricing_plan_id' => $pricingPlanId,
+                'state_id' => $stateId,
+                'discount_amount' => $discountAmount,
+                'subtotal' => $subtotal,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $totalAmount,
+            ];
+
+            if (isset($data['metadata'])) {
+                $orderUpdateData['metadata'] = $data['metadata'];
+            }
+
+            // Preserve order status and payment status - don't update them
+            $order->update($orderUpdateData);
+
+            // Reload relationships
+            $order->load(['country', 'pricingPlan', 'company', 'state']);
+
             return $order;
         });
     }

@@ -14,6 +14,7 @@ class CompanyResource extends JsonResource
             'name' => $this->name,
             'type' => $this->type?->value,
             'type_label' => $this->type?->label(),
+            'category' => $this->category ?? [],
             'status' => $this->status?->value,
             'status_label' => $this->status?->label(),
             'registration_number' => $this->registration_number,
