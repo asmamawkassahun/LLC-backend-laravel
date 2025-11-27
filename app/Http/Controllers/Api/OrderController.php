@@ -22,12 +22,21 @@ class OrderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $perPage = $request->input('per_page', 15);
+        $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
+
         $orders = $request->user()->orders()
             ->with(['country', 'pricingPlan', 'company', 'state'])
             ->latest()
-            ->paginate(15);
+            ->paginate($perPage);
 
-        return response()->json(OrderResource::collection($orders));
+        return response()->json([
+            'data' => OrderResource::collection($orders->items()),
+            'current_page' => $orders->currentPage(),
+            'last_page' => $orders->lastPage(),
+            'per_page' => $orders->perPage(),
+            'total' => $orders->total(),
+        ]);
     }
 
     public function store(CreateOrderRequest $request): JsonResponse
