@@ -48,6 +48,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/companies', [CompanyController::class, 'store']);
         Route::get('/companies/{id}', [CompanyController::class, 'show']);
         Route::put('/companies/{id}', [CompanyController::class, 'update']);
+        Route::post('/companies/{id}/set-primary', [CompanyController::class, 'setAsPrimary']);
 
         // Marketplace
         Route::get('/marketplace/services', [MarketplaceController::class, 'index']);

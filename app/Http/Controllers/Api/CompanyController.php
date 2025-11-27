@@ -56,4 +56,22 @@ class CompanyController extends Controller
 
         return response()->json(new CompanyResource($company->load(['country', 'state', 'owners', 'addresses'])));
     }
+
+    public function setAsPrimary(Request $request, $id): JsonResponse
+    {
+        $company = $request->user()->companies()->findOrFail($id);
+
+        // Set all other companies for this user to is_primary = false
+        $request->user()->companies()
+            ->where('id', '!=', $id)
+            ->update(['is_primary' => false]);
+
+        // Set this company as primary
+        $company->update(['is_primary' => true]);
+
+        return response()->json([
+            'message' => 'Company set as primary successfully',
+            'company' => new CompanyResource($company->load(['country', 'state', 'owners', 'addresses'])),
+        ]);
+    }
 }

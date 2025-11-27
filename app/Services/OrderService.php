@@ -87,6 +87,9 @@ class OrderService
             $pricingPlanId = $pricingPlan->id;
             
             // Step 4: Company Storage
+            // Check if this is the user's first order
+            $isFirstOrder = $user->orders()->count() === 0;
+            
             $company = Company::create([
                 'user_id' => $user->id,
                 'order_id' => null, // Will be updated after order creation
@@ -95,6 +98,7 @@ class OrderService
                 'country_id' => $countryId,
                 'state_id' => $stateId,
                 'status' => CompanyStatus::PENDING,
+                'is_primary' => $isFirstOrder, // Set to true if this is the first order
             ]);
             $companyId = $company->id;
             
