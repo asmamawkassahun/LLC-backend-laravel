@@ -56,9 +56,13 @@ class AuthController extends Controller
             'country' => $request->country,
         ]);
 
-        if ($request->has('profile')) {
-            $user->profile()->create($request->profile);
-        }
+        // if ($request->has('profile')) {
+        //     $user->profile()->create($request->profile);
+        // }
+
+        $user->profile()->create([
+            'user_id' => $user->id,            
+        ]);
 
         $tokens = $this->generateTokens($user);
 

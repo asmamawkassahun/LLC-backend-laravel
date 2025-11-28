@@ -34,7 +34,7 @@ Route::prefix('v1')->group(function () {
         // User
         Route::get('/user', [UserController::class, 'show']);
         Route::put('/user', [UserController::class, 'update']);
-        Route::post('/user/change-password', [UserController::class, 'changePassword']);
+        Route::put('/user/change-password', [UserController::class, 'changePassword']);
 
         // Orders
         Route::get('/orders', [OrderController::class, 'index']);

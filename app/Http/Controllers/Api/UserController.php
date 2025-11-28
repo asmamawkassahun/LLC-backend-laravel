@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -31,21 +33,31 @@ class UserController extends Controller
         return response()->json(new UserResource($user->load('profile')));
     }
 
-    public function changePassword(Request $request): JsonResponse
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
     {
-        $request->validate([
-            'current_password' => 'required',
-            'password' => 'required|confirmed|min:8',
-        ]);
-
         $user = $request->user();
 
+        // Verify current password
         if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json(['message' => 'Current password is incorrect'], 422);
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
         }
 
-        $user->update(['password' => Hash::make($request->password)]);
+        // Check if new password is different from current password
+        if (Hash::check($request->password, $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['The new password must be different from your current password.'],
+            ]);
+        }
 
-        return response()->json(['message' => 'Password updated successfully']);
+        // Update password
+        $user->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return response()->json([
+            'message' => 'Password updated successfully'
+        ], 200);
     }
 }

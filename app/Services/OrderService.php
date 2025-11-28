@@ -382,7 +382,7 @@ class OrderService
 
             // Reload relationships
             $order->load(['country', 'pricingPlan', 'company', 'state']);
-
+            
             return $order;
         });
     }
