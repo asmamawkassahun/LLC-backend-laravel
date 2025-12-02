@@ -43,6 +43,7 @@ Route::prefix('v1')->group(function () {
         Route::put('/orders/{id}', [OrderController::class, 'update']);
         Route::post('/orders/{id}/apply-promo-code', [OrderController::class, 'applyPromoCode']);
         Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+        Route::get('/registered-agent-address', [OrderController::class, 'getRegisteredAgentAddress']);
 
         // Companies
         Route::get('/companies', [CompanyController::class, 'index']);

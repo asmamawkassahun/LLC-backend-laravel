@@ -5,27 +5,25 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CompanyOwner extends Model
+class registeredAgentAddress extends Model
 {
+    
     protected $fillable = [
-        'company_id',
-        'full_name',
-        'ownership_percentage',
-        'is_company',
-        'email',
-        'phone',
         'address',
+        'city',
+        'state',
+        'postal_code',
+        'country',
+        'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'ownership_percentage' => 'decimal:2',
-            'is_company' => 'boolean',
-            'address' => 'array',
+            'is_active' => 'boolean',
         ];
     }
-
+    
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

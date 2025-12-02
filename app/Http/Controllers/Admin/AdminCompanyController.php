@@ -15,7 +15,7 @@ class AdminCompanyController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $companies = Company::with(['user', 'country', 'state', 'owners', 'addresses'])
+        $companies = Company::with(['user', 'country', 'state', 'owners', 'addresses', 'service'])
             ->latest()
             ->paginate(20);
 
@@ -24,7 +24,7 @@ class AdminCompanyController extends Controller
 
     public function show($id): JsonResponse
     {
-        $company = Company::with(['user', 'country', 'state', 'owners', 'addresses'])
+        $company = Company::with(['user', 'country', 'state', 'owners', 'addresses', 'service'])
             ->findOrFail($id);
 
         return response()->json(new CompanyResource($company));
@@ -43,7 +43,7 @@ class AdminCompanyController extends Controller
             $this->companyFormationService->completeFormation($company, $request->only(['registration_number', 'ein']));
         }
 
-        return response()->json(new CompanyResource($company->fresh()));
+        return response()->json(new CompanyResource($company->fresh()->load('service')));
     }
 
     public function approve($id): JsonResponse
@@ -51,6 +51,6 @@ class AdminCompanyController extends Controller
         $company = Company::findOrFail($id);
         $this->companyFormationService->completeFormation($company);
 
-        return response()->json(new CompanyResource($company->fresh()));
+        return response()->json(new CompanyResource($company->fresh()->load('service')));
     }
 }

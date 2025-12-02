@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             StatesSeeder::class,
             PricingPlansSeeder::class,
             MarketplaceServicesSeeder::class,
+            RegisteredAgentAddressSeeder::class,
+            ServicePricingSeeder::class, 
             SettingsSeeder::class,
             AdminUserSeeder::class,
         ]);

@@ -65,7 +65,10 @@ class CompanyFormationService
         // For now, return a placeholder
         $ein = '12-' . str_pad(rand(1000000, 9999999), 7, '0', STR_PAD_LEFT);
         
-        $company->update(['ein' => $ein]);
+        // Store EIN in services table if service exists
+        if ($company->service) {
+            $company->service->update(['ein' => $ein]);
+        }
         
         return $ein;
     }
@@ -76,9 +79,13 @@ class CompanyFormationService
             $company->update([
                 'status' => CompanyStatus::FORMED,
                 'registration_number' => $data['registration_number'] ?? null,
-                'ein' => $data['ein'] ?? $company->ein,
                 'formed_at' => now(),
             ]);
+            
+            // Update EIN in services table if provided and service exists
+            if (isset($data['ein']) && $company->service) {
+                $company->service->update(['ein' => $data['ein']]);
+            }
             
             if ($company->order) {
                 $company->order->update([

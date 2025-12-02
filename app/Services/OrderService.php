@@ -12,6 +12,8 @@ use App\Models\Country;
 use App\Models\Order;
 use App\Models\PricingPlan;
 use App\Models\PromoCode;
+use App\Models\Service;
+use App\Models\ServicePricing;
 use App\Models\State;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -102,14 +104,55 @@ class OrderService
                 'is_primary' => $isFirstOrder, // Set to true if this is the first order
             ]);
             $companyId = $company->id;
+
+            // Step 5: Service Storage
+            $servicePricingTotal = 0;
+            $serviceData = [];
             
-            // Step 5: Order Storage
+            if (isset($data['services']) && is_array($data['services'])) {
+                // Map frontend service keys to database field names, pricing names, and display names
+                $serviceMapping = [
+                    'ein' => ['field' => 'ein', 'pricing_name' => 'ein', 'display_name' => 'EIN'],
+                    'itin' => ['field' => 'itin', 'pricing_name' => 'itin', 'display_name' => 'ITIN'],
+                    'website' => ['field' => 'website', 'pricing_name' => 'website', 'display_name' => 'Website'],
+                    'domainHosting' => ['field' => 'domain_hosting', 'pricing_name' => 'domain_hosting', 'display_name' => 'Domain Hosting'],
+                    'businessEmail' => ['field' => 'business_email', 'pricing_name' => 'business_email', 'display_name' => 'Business Email'],
+                ];
+
+                
+                // Filter only services that are true
+                $selectedServices = array_filter($data['services'], function($value) {
+                    return $value === true;
+                });
+                
+                if (!empty($selectedServices)) {
+                    // Get service pricing names for lookup (use lowercase database names)
+                    $servicePricingNames = array_map(function($key) use ($serviceMapping) {
+                        return $serviceMapping[$key]['pricing_name'] ?? $key;
+                    }, array_keys($selectedServices));
+                    
+                    // Get pricing for selected services
+                    $servicePricing = ServicePricing::whereIn('name', $servicePricingNames)->get();
+                    $servicePricingTotal = $servicePricing->sum('price');
+                    
+                    // Build service data with "pending_display_name" format
+                    foreach ($selectedServices as $key => $value) {
+                        if (isset($serviceMapping[$key])) {
+                            $fieldName = $serviceMapping[$key]['field'];
+                            $displayName = $serviceMapping[$key]['display_name'];
+                            $serviceData[$fieldName] = 'pending ' . $displayName.$order->company->id;
+                        }
+                    }
+                }
+            }
+
+            // Step 6: Order Storage
             $orderNumber = $this->generateOrderNumber();
             
             // Calculate totals from relationships
             $basePriceValue = $pricingPlan->base_price;
             $stateFee = $state ? ($state->formation_fee ?? 0) : 0;
-            $subtotal = $basePriceValue + $stateFee;
+            $subtotal = $basePriceValue + $stateFee + $servicePricingTotal;
             $discountAmount = 0;
             
             if (isset($data['promo_code'])) {
@@ -144,7 +187,14 @@ class OrderService
             // Step 6: Update company with order_id
             $company->update(['order_id' => $order->id]);
             
-            // Step 7: Company Address and Owner Storage
+            // Step 7: Create Service record if any services are selected
+            if (!empty($serviceData)) {
+                Service::create(array_merge([
+                    'company_id' => $companyId,
+                ], $serviceData));
+            }
+            
+            // Step 8: Company Address and Owner Storage
             if (isset($data['owners']) && is_array($data['owners'])) {
                 foreach ($data['owners'] as $ownerData) {
                     CompanyOwner::create([
@@ -152,7 +202,6 @@ class OrderService
                         'full_name' => $ownerData['full_name'] ?? '',
                         'ownership_percentage' => $ownerData['ownership_percentage'] ?? 0,
                         'is_company' => $ownerData['is_company'] ?? false,
-                        'ssn_or_itin' => $ownerData['ssn_or_itin'] ?? null,
                         'email' => $ownerData['email'] ?? null,
                         'phone' => $ownerData['phone'] ?? null,
                         'address' => $ownerData['address'] ?? null,
@@ -308,7 +357,6 @@ class OrderService
                             'full_name' => $ownerData['full_name'] ?? '',
                             'ownership_percentage' => $ownerData['ownership_percentage'] ?? 0,
                             'is_company' => $ownerData['is_company'] ?? false,
-                            'ssn_or_itin' => $ownerData['ssn_or_itin'] ?? null,
                             'email' => $ownerData['email'] ?? null,
                             'phone' => $ownerData['phone'] ?? null,
                             'address' => $ownerData['address'] ?? null,
@@ -339,14 +387,71 @@ class OrderService
                 }
             }
 
-            // Step 7: Update Order
+            // Step 7: Update Service record
+            $servicePricingTotal = 0;
+            
+            if (isset($data['services']) && is_array($data['services']) && $order->company) {
+                // Map frontend service keys to database field names, pricing names, and display names
+                $serviceMapping = [
+                    'ein' => ['field' => 'ein', 'pricing_name' => 'ein', 'display_name' => 'EIN'],
+                    'itin' => ['field' => 'itin', 'pricing_name' => 'itin', 'display_name' => 'ITIN'],
+                    'website' => ['field' => 'website', 'pricing_name' => 'website', 'display_name' => 'Website'],
+                    'domainHosting' => ['field' => 'domain_hosting', 'pricing_name' => 'domain_hosting', 'display_name' => 'Domain Hosting'],
+                    'businessEmail' => ['field' => 'business_email', 'pricing_name' => 'business_email', 'display_name' => 'Business Email'],
+                ];
+                
+                // Filter only services that are true
+                $selectedServices = array_filter($data['services'], function($value) {
+                    return $value === true;
+                });
+                
+                // Get service pricing names for lookup (use lowercase database names)
+                $servicePricingNames = array_map(function($key) use ($serviceMapping) {
+                    return $serviceMapping[$key]['pricing_name'] ?? $key;
+                }, array_keys($selectedServices));
+                
+                // Get pricing for selected services
+                if (!empty($servicePricingNames)) {
+                    $servicePricing = ServicePricing::whereIn('name', $servicePricingNames)->get();
+                    $servicePricingTotal = $servicePricing->sum('price');
+                }
+                
+                // Build service data with "pending_display_name" format for selected services
+                // and null for unselected services
+                $serviceData = [];
+                foreach ($serviceMapping as $key => $mapping) {
+                    $fieldName = $mapping['field'];
+                    if (isset($selectedServices[$key]) && $selectedServices[$key] === true) {
+                        $displayName = $mapping['display_name'];
+                        $serviceData[$fieldName] = 'pending ' . $displayName.$order->company->id;
+                    } else {
+                        $serviceData[$fieldName] = null;
+                    }
+                }
+                
+                // Update or create service record
+                $service = $order->company->service;
+                if ($service) {
+                    // Update existing service record
+                    $service->update($serviceData);
+                } else {
+                    // Create new service record only if at least one service is selected
+                    if (!empty($selectedServices)) {
+                        Service::create(array_merge([
+                            'company_id' => $order->company->id,
+                        ], $serviceData));
+                    }
+                }
+            }
+
+            // Step 8: Update Order
             // Reload pricing plan and state to get updated values
             $pricingPlan = PricingPlan::find($pricingPlanId);
             $state = $stateId ? State::find($stateId) : null;
 
             $basePriceValue = $pricingPlan->base_price ?? 0;
             $stateFee = $state ? ($state->formation_fee ?? 0) : 0;
-            $subtotal = $basePriceValue + $stateFee;
+            $subtotal = $basePriceValue + $stateFee + $servicePricingTotal;
             $discountAmount = $order->discount_amount; // Preserve existing discount
 
             // Handle promo code if provided

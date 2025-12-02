@@ -27,7 +27,7 @@ class OrderController extends Controller
         $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
 
         $orders = $request->user()->orders()
-            ->with(['country', 'pricingPlan', 'company', 'state'])
+            ->with(['country', 'pricingPlan', 'company', 'company.service', 'state'])
             ->latest()
             ->paginate($perPage);
 
@@ -46,7 +46,7 @@ class OrderController extends Controller
 
         $this->notificationService->sendOrderNotification($order, 'order_created');
 
-        return response()->json(new OrderResource($order->load(['country', 'pricingPlan', 'company', 'state'])), 201);
+        return response()->json(new OrderResource($order->load(['country', 'pricingPlan', 'company', 'company.service', 'state'])), 201);
     }
 
     public function show(Request $request, $id): JsonResponse
@@ -60,6 +60,7 @@ class OrderController extends Controller
                 'company.addresses',
                 'company.country',
                 'company.state',
+                'company.service',
                 'state',
                 'payments'
             ])
@@ -84,9 +85,30 @@ class OrderController extends Controller
             'company.addresses',
             'company.country',
             'company.state',
+            'company.service',
             'state'
         ])));
     }
+
+    public function getRegisteredAgentAddress(Request $request): JsonResponse
+{
+    $address = \App\Models\registeredAgentAddress::where('is_active', true)
+        ->first();
+
+    if (!$address) {
+        return response()->json(['message' => 'No active registered agent address found'], 404);
+    }
+
+    return response()->json([
+        'data' => [
+            'address' => $address->address,
+            'city' => $address->city,
+            'state' => $address->state,
+            'postal_code' => $address->postal_code,
+            'country' => $address->country,
+        ]
+    ]);
+}
 
     public function applyPromoCode(ApplyPromoCodeRequest $request, $id): JsonResponse
     {

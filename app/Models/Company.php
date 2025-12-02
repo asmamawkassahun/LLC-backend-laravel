@@ -7,6 +7,7 @@ use App\Enums\CompanyType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Company extends Model
 {
@@ -19,8 +20,6 @@ class Company extends Model
         'country_id',
         'state_id',
         'registration_number',
-        'ein',
-        'itin',
         'status',
         'formed_at',
         'is_primary',
@@ -65,5 +64,10 @@ class Company extends Model
     public function addresses(): HasMany
     {
         return $this->hasMany(CompanyAddress::class);
+    }
+
+    public function service(): HasOne
+    {
+        return $this->hasOne(Service::class);
     }
 }
