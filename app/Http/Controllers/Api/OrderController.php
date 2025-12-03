@@ -137,4 +137,39 @@ class OrderController extends Controller
 
         return response()->json(['message' => 'Order cancelled successfully']);
     }
+
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        $order = $request->user()->orders()->findOrFail($id);
+        
+        // Prevent deletion of paid orders
+        if ($order->payment_status->value === 'paid') {
+            return response()->json([
+                'message' => 'Cannot delete paid orders. Please cancel the order instead.'
+            ], 422);
+        }
+        
+        // Prevent deletion of orders that are processing or completed
+        if (in_array($order->status->value, ['processing', 'completed'])) {
+            return response()->json([
+                'message' => 'Cannot delete orders that are processing or completed.'
+            ], 422);
+        }
+        
+        try {
+            // Delete related payments first (if any)
+            $order->payments()->delete();
+            
+            // Delete the order
+            $order->delete();
+            
+            return response()->json([
+                'message' => 'Order deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
