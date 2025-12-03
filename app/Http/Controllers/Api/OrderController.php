@@ -10,6 +10,7 @@ use App\Http\Resources\OrderResource;
 use App\Services\CompanyFormationService;
 use App\Services\NotificationService;
 use App\Services\OrderService;
+use App\Models\registeredAgentAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -92,7 +93,7 @@ class OrderController extends Controller
 
     public function getRegisteredAgentAddress(Request $request): JsonResponse
 {
-    $address = \App\Models\registeredAgentAddress::where('is_active', true)
+    $address = registeredAgentAddress::where('is_active', true)
         ->first();
 
     if (!$address) {

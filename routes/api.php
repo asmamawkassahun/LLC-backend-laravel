@@ -22,6 +22,9 @@ Route::prefix('v1')->group(function () {
         ->middleware(['signed'])
         ->name('verification.verify');
 
+        // Chapa callback (public - called by Chapa webhook)
+        Route::post('/payments/chapa/callback', [PaymentController::class, 'chapaCallback']);
+
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
         // Authentication
@@ -61,6 +64,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/payments/process', [PaymentController::class, 'process']);
         Route::get('/payments/{id}', [PaymentController::class, 'show']);
         Route::post('/payments/refund', [PaymentController::class, 'refund']);
+        // Chapa payment initialization
+        Route::post('/payments/chapa/initialize', [PaymentController::class, 'initializeChapa']);
+        Route::post('/payments/chapa/verify', [PaymentController::class, 'verifyPayment']);
 
         // Referrals
         Route::post('/referrals/register', [ReferralController::class, 'register']);
