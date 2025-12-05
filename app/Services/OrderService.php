@@ -140,7 +140,7 @@ class OrderService
                         if (isset($serviceMapping[$key])) {
                             $fieldName = $serviceMapping[$key]['field'];
                             $displayName = $serviceMapping[$key]['display_name'];
-                            $serviceData[$fieldName] = 'pending ' . $displayName.$order->company->id;
+                            $serviceData[$fieldName] = 'pending ' . $displayName . $companyId;
                         }
                     }
                 }

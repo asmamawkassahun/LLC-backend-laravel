@@ -5,21 +5,25 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\ApplyPromoCodeRequest;
 use App\Http\Requests\Order\CreateOrderRequest;
+use App\Http\Requests\Order\GeneratePdfFromFormDataRequest;
 use App\Http\Requests\Order\UpdateOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Services\CompanyFormationService;
 use App\Services\NotificationService;
 use App\Services\OrderService;
+use App\Services\OrderPdfService;
 use App\Models\registeredAgentAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class OrderController extends Controller
 {
     public function __construct(
         protected OrderService $orderService,
         protected CompanyFormationService $companyFormationService,
-        protected NotificationService $notificationService
+        protected NotificationService $notificationService,
+        protected OrderPdfService $orderPdfService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -169,6 +173,45 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to delete order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function downloadOrderSummary(Request $request, $id): Response
+    {
+        $order = $request->user()->orders()->findOrFail($id);
+        
+        try {
+            $pdf = $this->orderPdfService->generateOrderSummaryPdf($order);
+            
+            $filename = 'order-summary-' . $order->order_number . '.pdf';
+            
+            return response($pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function generatePdfFromFormData(GeneratePdfFromFormDataRequest $request): Response
+    {
+        try {
+            $userEmail = $request->user()->email;
+            $pdf = $this->orderPdfService->generateOrderSummaryPdfFromFormData($request->validated(), $userEmail);
+            
+            $filename = 'order-summary-preview.pdf';
+            
+            return response($pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -47,6 +47,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders/{id}/apply-promo-code', [OrderController::class, 'applyPromoCode']);
         Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
         Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
+        Route::get('/orders/{id}/download-summary', [OrderController::class, 'downloadOrderSummary']);
+        Route::post('/orders/generate-pdf-from-form-data', [OrderController::class, 'generatePdfFromFormData']);
         Route::get('/registered-agent-address', [OrderController::class, 'getRegisteredAgentAddress']);
 
         // Companies
