@@ -1,12 +1,30 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminActivityLogController;
+use App\Http\Controllers\Admin\AdminAffiliateController;
 use App\Http\Controllers\Admin\AdminCompanyController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminMarketplaceController;
 use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminPaymentController;
+use App\Http\Controllers\Admin\AdminPricingPlanController;
+use App\Http\Controllers\Admin\AdminPromoCodeController;
+use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminSupportController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Api\AdminAuthController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
+// Public admin auth routes
+Route::prefix('admin')->group(function () {
+    Route::post('/login', [AdminAuthController::class, 'login']);
+});
+
+// Protected admin routes
+Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+    // Auth
+    Route::post('/logout', [AdminAuthController::class, 'logout']);
+    Route::get('/me', [AdminAuthController::class, 'me']);
     // Orders
     Route::get('/orders', [AdminOrderController::class, 'index']);
     Route::get('/orders/{id}', [AdminOrderController::class, 'show']);
@@ -31,5 +49,54 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
     Route::post('/support/tickets/{id}/assign', [AdminSupportController::class, 'assign']);
     Route::post('/support/tickets/{id}/reply', [AdminSupportController::class, 'reply']);
     Route::post('/support/tickets/{id}/resolve', [AdminSupportController::class, 'resolve']);
+
+    // Payments
+    Route::get('/payments', [AdminPaymentController::class, 'index']);
+    Route::get('/payments/{id}', [AdminPaymentController::class, 'show']);
+    Route::post('/payments/{id}/refund', [AdminPaymentController::class, 'refund']);
+
+    // Pricing Plans
+    Route::get('/pricing-plans', [AdminPricingPlanController::class, 'index']);
+    Route::post('/pricing-plans', [AdminPricingPlanController::class, 'store']);
+    Route::put('/pricing-plans/{id}', [AdminPricingPlanController::class, 'update']);
+    Route::delete('/pricing-plans/{id}', [AdminPricingPlanController::class, 'destroy']);
+    Route::post('/pricing-plans/{id}/toggle-status', [AdminPricingPlanController::class, 'toggleStatus']);
+
+    // Promo Codes
+    Route::get('/promo-codes', [AdminPromoCodeController::class, 'index']);
+    Route::post('/promo-codes', [AdminPromoCodeController::class, 'store']);
+    Route::put('/promo-codes/{id}', [AdminPromoCodeController::class, 'update']);
+    Route::delete('/promo-codes/{id}', [AdminPromoCodeController::class, 'destroy']);
+    Route::post('/promo-codes/{id}/toggle-status', [AdminPromoCodeController::class, 'toggleStatus']);
+
+    // Marketplace
+    Route::get('/marketplace/services', [AdminMarketplaceController::class, 'index']);
+    Route::post('/marketplace/services', [AdminMarketplaceController::class, 'store']);
+    Route::put('/marketplace/services/{id}', [AdminMarketplaceController::class, 'update']);
+    Route::delete('/marketplace/services/{id}', [AdminMarketplaceController::class, 'destroy']);
+    Route::post('/marketplace/services/{id}/toggle-status', [AdminMarketplaceController::class, 'toggleStatus']);
+
+    // Affiliates
+    Route::get('/affiliates', [AdminAffiliateController::class, 'index']);
+    Route::get('/affiliates/{id}', [AdminAffiliateController::class, 'show']);
+    Route::put('/affiliates/{id}/status', [AdminAffiliateController::class, 'updateStatus']);
+    Route::put('/affiliates/{id}/commission-rate', [AdminAffiliateController::class, 'updateCommissionRate']);
+    Route::get('/affiliates/{id}/commissions', [AdminAffiliateController::class, 'commissions']);
+
+    // Settings
+    Route::get('/settings', [AdminSettingsController::class, 'index']);
+    Route::put('/settings', [AdminSettingsController::class, 'update']);
+    Route::get('/settings/{key}', [AdminSettingsController::class, 'get']);
+    Route::put('/settings/{key}', [AdminSettingsController::class, 'set']);
+
+    // Dashboard
+    Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);
+    Route::get('/dashboard/recent-orders', [AdminDashboardController::class, 'recentOrders']);
+    Route::get('/dashboard/recent-users', [AdminDashboardController::class, 'recentUsers']);
+    Route::get('/dashboard/revenue-chart', [AdminDashboardController::class, 'revenueChart']);
+
+    // Activity Logs
+    Route::get('/activity-logs', [AdminActivityLogController::class, 'index']);
+    Route::get('/activity-logs/{id}', [AdminActivityLogController::class, 'show']);
 });
 
