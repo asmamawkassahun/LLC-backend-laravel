@@ -7,6 +7,8 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class AdminUserController extends Controller
 {
@@ -49,11 +51,22 @@ class AdminUserController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,email,' . $id,
+            'phone' => 'sometimes|nullable|string|max:20',
+            'country' => 'sometimes|nullable|string|max:100',
+            'password' => ['sometimes', 'nullable', 'string', 'min:8'],
             'is_active' => 'sometimes|boolean',
         ]);
 
         $user = User::findOrFail($id);
-        $user->update($request->only(['name', 'email', 'is_active']));
+        
+        $updateData = $request->only(['name', 'email', 'phone', 'country', 'is_active']);
+        
+        // Only update password if provided and not empty
+        if ($request->filled('password') && $request->password !== '') {
+            $updateData['password'] = Hash::make($request->password);
+        }
+        
+        $user->update($updateData);
 
         return response()->json(new UserResource($user->load('profile')));
     }
@@ -64,5 +77,13 @@ class AdminUserController extends Controller
         $user->update(['is_active' => false]);
 
         return response()->json(['message' => 'User deactivated successfully']);
+    }
+
+    public function destroy($id): JsonResponse
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return response()->json(['message' => 'User deleted successfully']);
     }
 }

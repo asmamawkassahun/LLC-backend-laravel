@@ -141,7 +141,7 @@ class OrderController extends Controller
     {
         $order = $request->user()->orders()->findOrFail($id);
 
-        if (!in_array($order->status->value, ['draft', 'pending_payment'])) {
+        if ($order->status->value !== 'pending') {
             return response()->json(['message' => 'Order cannot be cancelled'], 422);
         }
 
@@ -164,10 +164,10 @@ class OrderController extends Controller
             ], 422);
         }
         
-        // Prevent deletion of orders that are processing or completed
-        if (in_array($order->status->value, ['processing', 'completed'])) {
+        // Prevent deletion of orders that are formed
+        if (in_array($order->status->value, ['formed'])) {
             return response()->json([
-                'message' => 'Cannot delete orders that are processing or completed.'
+                'message' => 'Cannot delete orders that are formed.'
             ], 422);
         }
         

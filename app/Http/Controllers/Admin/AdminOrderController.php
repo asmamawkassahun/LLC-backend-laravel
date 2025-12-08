@@ -6,15 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Services\OrderService;
+use App\Services\OrderPdfService;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use App\Enums\OrderStatus;
 
 class AdminOrderController extends Controller
 {
     public function __construct(
         protected OrderService $orderService,
-        protected PaymentService $paymentService
+        protected PaymentService $paymentService,
+        protected OrderPdfService $orderPdfService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -22,7 +26,7 @@ class AdminOrderController extends Controller
         $perPage = $request->input('per_page', 20);
         $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
         
-        $query = Order::with(['user', 'country', 'pricingPlan', 'company', 'state', 'payments']);
+        $query = Order::with(['country', 'pricingPlan', 'company', 'state', 'payments'])->where('status', '!=',OrderStatus::FORMED->value);
         
         // Filter by status if provided
         if ($request->has('status')) {
@@ -42,7 +46,7 @@ class AdminOrderController extends Controller
 
     public function show($id): JsonResponse
     {
-        $order = Order::with(['user', 'country', 'pricingPlan', 'company', 'state', 'payments'])
+        $order = Order::with(['country', 'pricingPlan', 'company', 'state', 'payments'])
             ->findOrFail($id);
 
         return response()->json(new OrderResource($order));
@@ -51,7 +55,7 @@ class AdminOrderController extends Controller
     public function updateStatus(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'status' => 'required|in:draft,pending_payment,paid,processing,completed,cancelled,refunded',
+            'status' => 'required|in:pending,pending_payment,paid,formed,cancelled',
         ]);
 
         $order = Order::findOrFail($id);
@@ -70,6 +74,27 @@ class AdminOrderController extends Controller
             return response()->json(new \App\Http\Resources\PaymentResource($payment));
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function downloadOrderSummary($id): Response
+    {
+        $order = Order::with(['country', 'pricingPlan', 'company', 'company.owners', 'company.addresses', 'state', 'payments'])
+            ->findOrFail($id);
+
+        try {
+            $pdf = $this->orderPdfService->generateOrderSummaryPdf($order);
+            
+            $filename = 'order-summary-' . $order->order_number . '.pdf';
+            
+            return response($pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

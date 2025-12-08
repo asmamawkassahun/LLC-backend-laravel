@@ -179,7 +179,7 @@ class OrderService
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
                 'total_amount' => $totalAmount,
-                'status' => OrderStatus::DRAFT,
+                'status' => OrderStatus::PENDING,
                 'payment_status' => PaymentStatus::UNPAID,
                 'metadata' => $data['metadata'] ?? [],
             ]);
@@ -633,7 +633,7 @@ class OrderService
     {
         $order->update(['status' => $status]);
         
-        if ($status === OrderStatus::COMPLETED) {
+        if ($status === OrderStatus::FORMED) {
             $order->update(['completed_at' => now()]);
         } elseif ($status === OrderStatus::CANCELLED) {
             $order->update(['cancelled_at' => now()]);

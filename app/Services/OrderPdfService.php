@@ -142,8 +142,8 @@ class OrderPdfService
             }
         }
 
-        // Format address
-        $addressString = 'N/A';
+        // Format company address
+        $companyAddressString = 'N/A';
         if ($company && $company->addresses && $company->addresses->isNotEmpty()) {
             $address = $company->addresses->first();
             $addressParts = array_filter([
@@ -153,12 +153,39 @@ class OrderPdfService
                 $address->zip_code,
                 $address->country,
             ]);
-            $addressString = !empty($addressParts) ? implode(', ', $addressParts) : 'N/A';
+            $companyAddressString = !empty($addressParts) ? implode(', ', $addressParts) : 'N/A';
         }
+
+        // Format address (for the Address section at the bottom - keeping for backward compatibility)
+        $addressString = $companyAddressString;
 
         // Format payment status
         $paymentStatus = $order->payment_status ? $order->payment_status->value : 'unpaid';
         $paymentStatusLabel = ucfirst($paymentStatus);
+
+        // Format owners with addresses
+        $ownersWithAddresses = collect();
+        if ($company && $company->owners) {
+            foreach ($company->owners as $owner) {
+                $ownerAddressString = 'N/A';
+                if ($owner->address && is_array($owner->address)) {
+                    $addressParts = array_filter([
+                        $owner->address['streetAddress'] ?? $owner->address['street_address'] ?? '',
+                        $owner->address['city'] ?? '',
+                        $owner->address['state'] ?? '',
+                        $owner->address['zipCode'] ?? $owner->address['zip_code'] ?? '',
+                        $owner->address['country'] ?? '',
+                    ]);
+                    $ownerAddressString = !empty($addressParts) ? implode(', ', $addressParts) : 'N/A';
+                }
+                
+                $ownersWithAddresses->push((object) [
+                    'full_name' => $owner->full_name,
+                    'ownership_percentage' => $owner->ownership_percentage,
+                    'address' => $ownerAddressString,
+                ]);
+            }
+        }
 
         return [
             'order' => $order,
@@ -168,10 +195,11 @@ class OrderPdfService
             'paymentStatus' => $paymentStatusLabel,
             'company' => $company,
             'companyName' => $company ? $company->name : 'N/A',
+            'companyAddressString' => $companyAddressString,
             'categoryLabels' => $categoryLabels,
             'stateName' => $order->state ? $order->state->name : null,
             'stateFee' => $order->state ? number_format($order->state->formation_fee ?? 0, 2) : '0.00',
-            'owners' => $company ? $company->owners : collect(),
+            'owners' => $ownersWithAddresses,
             'addressString' => $addressString,
             'isUKPlan' => $pricingPlanName && (stripos($pricingPlanName, 'uk') !== false || stripos($pricingPlanName, 'united kingdom') !== false),
         ];
@@ -269,7 +297,8 @@ class OrderPdfService
             }
         }
 
-        // Format address
+        // Format company address
+        $companyAddressString = 'N/A';
         $address = $formData['address'] ?? [];
         $addressParts = array_filter([
             $address['streetAddress'] ?? '',
@@ -278,16 +307,31 @@ class OrderPdfService
             $address['zipCode'] ?? '',
             $address['country'] ?? '',
         ]);
-        $addressString = !empty($addressParts) ? implode(', ', $addressParts) : 'N/A';
+        $companyAddressString = !empty($addressParts) ? implode(', ', $addressParts) : 'N/A';
+        
+        // Format address (for the Address section at the bottom - keeping for backward compatibility)
+        $addressString = $companyAddressString;
 
-        // Format owners
+        // Format owners with addresses
         $owners = collect();
         if (isset($formData['owners']) && is_array($formData['owners'])) {
             foreach ($formData['owners'] as $ownerData) {
+                $ownerAddressString = 'N/A';
+                if (isset($ownerData['address']) && is_array($ownerData['address'])) {
+                    $addressParts = array_filter([
+                        $ownerData['address']['streetAddress'] ?? '',
+                        $ownerData['address']['city'] ?? '',
+                        $ownerData['address']['state'] ?? '',
+                        $ownerData['address']['zipCode'] ?? '',
+                        $ownerData['address']['country'] ?? '',
+                    ]);
+                    $ownerAddressString = !empty($addressParts) ? implode(', ', $addressParts) : 'N/A';
+                }
+                
                 $owners->push((object) [
                     'full_name' => $ownerData['fullName'] ?? '',
                     'ownership_percentage' => $ownerData['ownershipPercentage'] ?? 0,
-                    'is_company' => $ownerData['isCompany'] ?? false,
+                    'address' => $ownerAddressString,
                 ]);
             }
         }
@@ -309,6 +353,7 @@ class OrderPdfService
             'paymentStatus' => 'Unpaid', // Always unpaid for new orders
             'company' => null,
             'companyName' => $formData['companyName'] ?? 'N/A',
+            'companyAddressString' => $companyAddressString,
             'categoryLabels' => $categoryLabels,
             'stateName' => $stateName,
             'stateFee' => $stateFee,

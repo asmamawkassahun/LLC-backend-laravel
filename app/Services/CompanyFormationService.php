@@ -42,7 +42,6 @@ class CompanyFormationService
             
             $order->update([
                 'company_id' => $company->id,
-                'status' => OrderStatus::PROCESSING,
             ]);
             
             return $company;
@@ -93,7 +92,6 @@ class CompanyFormationService
             
             if ($company->order) {
                 $company->order->update([
-                    'status' => OrderStatus::COMPLETED,
                     'completed_at' => now(),
                 ]);
             }

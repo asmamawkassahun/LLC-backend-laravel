@@ -194,6 +194,10 @@
                         <span class="value">N/A</span>
                     @endif
                 </p>
+                <p>
+                    <span class="label">Address: </span>
+                    <span class="value">{{ $companyAddressString ?? $addressString ?? 'N/A' }}</span>
+                </p>
             </div>
         </div>
         
@@ -224,7 +228,7 @@
                             <tr>
                                 <th>Full name</th>
                                 <th>Percentage</th>
-                                <th>Is a Company</th>
+                                <th>Address</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -232,7 +236,7 @@
                                 <tr>
                                     <td>{{ $owner->full_name }}</td>
                                     <td>{{ $owner->ownership_percentage }} %</td>
-                                    <td>{{ $owner->is_company ? 'Yes' : 'No' }}</td>
+                                    <td>{{ $owner->address ?? 'N/A' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -244,12 +248,12 @@
         </div>
         
         <!-- Address Section -->
-        <div class="section">
+        <!-- <div class="section">
             <div class="section-title">Address</div>
             <div class="section-content">
                 <p>{{ $addressString }}</p>
             </div>
-        </div>
+        </div> -->
     </div>
 </body>
 </html>

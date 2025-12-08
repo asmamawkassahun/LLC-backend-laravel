@@ -55,7 +55,7 @@ class PaymentService
                 
                 $order->update([
                     'payment_status' => PaymentStatus::PAID,
-                    'status' => OrderStatus::PAID,
+                    // 'status' => OrderStatus::PAID,
                     'paid_at' => now(),
                     'payment_method' => 'stripe',
                     'payment_reference' => $charge->id,
@@ -114,7 +114,6 @@ class PaymentService
                     
                     $order->update([
                         'payment_status' => PaymentStatus::REFUNDED,
-                        'status' => OrderStatus::REFUNDED,
                     ]);
                     
                     return $payment;
@@ -318,7 +317,7 @@ class PaymentService
                             
                             $order->update([
                                 'payment_status' => PaymentStatus::PAID,
-                                'status' => OrderStatus::PAID,
+                                // 'status' => OrderStatus::PAID,
                                 'paid_at' => now(),
                                 'payment_method' => 'chapa',
                                 'payment_reference' => $txRef,

@@ -28,7 +28,7 @@ return new class extends Migration
             $table->decimal('subtotal', 10, 2);
             $table->decimal('tax_amount', 10, 2)->default(0);
             $table->decimal('total_amount', 10, 2);
-            $table->string('status')->default('draft'); // draft, pending_payment, paid, processing, completed, cancelled, refunded
+            $table->string('status')->default('pending'); // pending, pending_payment, paid, formed, cancelled
             $table->string('payment_status')->default('unpaid'); // unpaid, pending, paid, failed, refunded
             $table->string('payment_method')->nullable();
             $table->string('payment_reference')->nullable();
