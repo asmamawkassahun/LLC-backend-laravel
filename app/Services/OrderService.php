@@ -93,7 +93,7 @@ class OrderService
             $isFirstOrder = $user->orders()->count() === 0;
             
             $company = Company::create([
-                'user_id' => $user->id,
+                'company_owner_ids' => [], // Will be populated after owners are created
                 'order_id' => null, // Will be updated after order creation
                 'name' => $data['company_name'],
                 'type' => $data['company_type'],
@@ -195,9 +195,10 @@ class OrderService
             }
             
             // Step 8: Company Address and Owner Storage
+            $ownerIds = [];
             if (isset($data['owners']) && is_array($data['owners'])) {
                 foreach ($data['owners'] as $ownerData) {
-                    CompanyOwner::create([
+                    $owner = CompanyOwner::create([
                         'company_id' => $companyId,
                         'full_name' => $ownerData['full_name'] ?? '',
                         'ownership_percentage' => $ownerData['ownership_percentage'] ?? 0,
@@ -206,21 +207,66 @@ class OrderService
                         'phone' => $ownerData['phone'] ?? null,
                         'address' => $ownerData['address'] ?? null,
                     ]);
+                    $ownerIds[] = $owner->id;
                 }
+                // Update company with owner IDs
+                $company->update(['company_owner_ids' => $ownerIds]);
             }
             
             if (isset($data['addresses']) && is_array($data['addresses'])) {
                 foreach ($data['addresses'] as $addressData) {
-                    CompanyAddress::create([
-                        'company_id' => $companyId,
-                        'type' => $addressData['type'] ?? 'registered',
-                        'street_address' => $addressData['street_address'] ?? '',
-                        'city' => $addressData['city'] ?? '',
-                        'state' => $addressData['state'] ?? '',
-                        'zip_code' => $addressData['zip_code'] ?? '',
-                        'country' => $addressData['country'] ?? '',
-                        'is_active' => true,
-                    ]);
+                    // Check if using registered agent address - handle various formats
+                    $useRegisteredAgent = false;
+                    if (isset($addressData['use_registered_agent'])) {
+                        $value = $addressData['use_registered_agent'];
+                        $useRegisteredAgent = ($value === true || $value === 'true' || $value === 1 || $value === '1' || $value === 'True');
+                    }
+                    
+                    // If using registered agent, we must have the ID
+                    if ($useRegisteredAgent) {
+                        if (!isset($addressData['registered_agent_address_id']) || !$addressData['registered_agent_address_id']) {
+                            throw new \Exception('Registered agent address ID is required when using registered agent address');
+                        }
+                        
+                        // Use the registered agent address ID sent from frontend
+                        $registeredAgentAddressId = (int) $addressData['registered_agent_address_id'];
+                        
+                        // Verify the registered agent address exists and is active
+                        $registeredAgentAddress = \App\Models\registeredAgentAddress::where('id', $registeredAgentAddressId)
+                            ->where('is_active', true)
+                            ->first();
+                        
+                        if (!$registeredAgentAddress) {
+                            throw new \Exception("Registered agent address with ID {$registeredAgentAddressId} not found or is not active");
+                        }
+                        
+                        // Create address with registered agent reference only
+                        CompanyAddress::create([
+                            'company_id' => $companyId,
+                            'registered_agent_address_id' => $registeredAgentAddressId,
+                            'type' => $addressData['type'] ?? 'registered',
+                            // Address fields MUST be null when using registered agent
+                            'street_address' => null,
+                            'city' => null,
+                            'state' => null,
+                            'zip_code' => null,
+                            'country' => null,
+                            'is_active' => true,
+                        ]);
+                    } else {
+                        // Regular address entry - NOT using registered agent
+                        CompanyAddress::create([
+                            'company_id' => $companyId,
+                            'registered_agent_address_id' => null,
+                            'type' => $addressData['type'] ?? 'registered',
+                            'street_address' => $addressData['street_address'] ?? '',
+                            'city' => $addressData['city'] ?? '',
+                            'state' => $addressData['state'] ?? '',
+                            'zip_code' => $addressData['zip_code'] ?? '',
+                            'country' => $addressData['country'] ?? '',
+                            'is_active' => true,
+                        ]);
+                    }
                 }
             }
             
@@ -350,9 +396,10 @@ class OrderService
                     // Delete existing owners
                     $order->company->owners()->delete();
 
-                    // Create new owners
+                    // Create new owners and collect their IDs
+                    $ownerIds = [];
                     foreach ($data['owners'] as $ownerData) {
-                        CompanyOwner::create([
+                        $owner = CompanyOwner::create([
                             'company_id' => $order->company->id,
                             'full_name' => $ownerData['full_name'] ?? '',
                             'ownership_percentage' => $ownerData['ownership_percentage'] ?? 0,
@@ -361,7 +408,10 @@ class OrderService
                             'phone' => $ownerData['phone'] ?? null,
                             'address' => $ownerData['address'] ?? null,
                         ]);
+                        $ownerIds[] = $owner->id;
                     }
+                    // Update company with new owner IDs
+                    $order->company->update(['company_owner_ids' => $ownerIds]);
                 }
             }
 
@@ -373,16 +423,58 @@ class OrderService
 
                     // Create new addresses
                     foreach ($data['addresses'] as $addressData) {
-                        CompanyAddress::create([
-                            'company_id' => $order->company->id,
-                            'type' => $addressData['type'] ?? 'registered',
-                            'street_address' => $addressData['street_address'] ?? '',
-                            'city' => $addressData['city'] ?? '',
-                            'state' => $addressData['state'] ?? '',
-                            'zip_code' => $addressData['zip_code'] ?? '',
-                            'country' => $addressData['country'] ?? '',
-                            'is_active' => true,
-                        ]);
+                        // Check if using registered agent address - handle various formats
+                        $useRegisteredAgent = false;
+                        if (isset($addressData['use_registered_agent'])) {
+                            $value = $addressData['use_registered_agent'];
+                            $useRegisteredAgent = ($value === true || $value === 'true' || $value === 1 || $value === '1' || $value === 'True');
+                        }
+                        
+                        // If using registered agent, we must have the ID
+                        if ($useRegisteredAgent) {
+                            if (!isset($addressData['registered_agent_address_id']) || !$addressData['registered_agent_address_id']) {
+                                throw new \Exception('Registered agent address ID is required when using registered agent address');
+                            }
+                            
+                            // Use the registered agent address ID sent from frontend
+                            $registeredAgentAddressId = (int) $addressData['registered_agent_address_id'];
+                            
+                            // Verify the registered agent address exists and is active
+                            $registeredAgentAddress = \App\Models\registeredAgentAddress::where('id', $registeredAgentAddressId)
+                                ->where('is_active', true)
+                                ->first();
+                            
+                            if (!$registeredAgentAddress) {
+                                throw new \Exception("Registered agent address with ID {$registeredAgentAddressId} not found or is not active");
+                            }
+                            
+                            // Create address with registered agent reference only
+                            CompanyAddress::create([
+                                'company_id' => $order->company->id,
+                                'registered_agent_address_id' => $registeredAgentAddressId,
+                                'type' => $addressData['type'] ?? 'registered',
+                                // Address fields MUST be null when using registered agent
+                                'street_address' => null,
+                                'city' => null,
+                                'state' => null,
+                                'zip_code' => null,
+                                'country' => null,
+                                'is_active' => true,
+                            ]);
+                        } else {
+                            // Regular address entry - NOT using registered agent
+                            CompanyAddress::create([
+                                'company_id' => $order->company->id,
+                                'registered_agent_address_id' => null,
+                                'type' => $addressData['type'] ?? 'registered',
+                                'street_address' => $addressData['street_address'] ?? '',
+                                'city' => $addressData['city'] ?? '',
+                                'state' => $addressData['state'] ?? '',
+                                'zip_code' => $addressData['zip_code'] ?? '',
+                                'country' => $addressData['country'] ?? '',
+                                'is_active' => true,
+                            ]);
+                        }
                     }
                 }
             }

@@ -69,11 +69,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the user's companies.
+     * Get the user's companies through orders.
+     * Since companies no longer have user_id, we query through orders.
      */
     public function companies()
     {
-        return $this->hasMany(Company::class);
+        return $this->hasManyThrough(
+            Company::class,
+            Order::class,
+            'user_id', // Foreign key on orders table
+            'id', // Foreign key on companies table
+            'id', // Local key on users table
+            'company_id' // Local key on orders table
+        );
     }
 
     /**

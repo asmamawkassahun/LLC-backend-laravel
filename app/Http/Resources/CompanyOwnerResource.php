@@ -16,6 +16,7 @@ class CompanyOwnerResource extends JsonResource
             'is_company' => $this->is_company,
             'email' => $this->email,
             'phone' => $this->phone,
+            'address' => $this->address,
         ];
     }
 }

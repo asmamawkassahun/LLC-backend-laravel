@@ -15,7 +15,7 @@ class CompanyFormationService
     {
         return DB::transaction(function () use ($order, $companyData) {
             $company = Company::create([
-                'user_id' => $order->user_id,
+                'company_owner_ids' => [], // Will be populated after owners are created
                 'order_id' => $order->id,
                 'name' => $companyData['name'],
                 'type' => $companyData['type'],
@@ -24,10 +24,14 @@ class CompanyFormationService
                 'status' => CompanyStatus::PENDING,
             ]);
             
+            $ownerIds = [];
             if (isset($companyData['owners'])) {
                 foreach ($companyData['owners'] as $ownerData) {
-                    $company->owners()->create($ownerData);
+                    $owner = $company->owners()->create($ownerData);
+                    $ownerIds[] = $owner->id;
                 }
+                // Update company with owner IDs
+                $company->update(['company_owner_ids' => $ownerIds]);
             }
             
             if (isset($companyData['addresses'])) {

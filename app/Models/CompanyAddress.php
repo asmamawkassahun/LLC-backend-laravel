@@ -9,6 +9,7 @@ class CompanyAddress extends Model
 {
     protected $fillable = [
         'company_id',
+        'registered_agent_address_id',
         'type',
         'street_address',
         'city',
@@ -28,5 +29,10 @@ class CompanyAddress extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function registeredAgentAddress(): BelongsTo
+    {
+        return $this->belongsTo(registeredAgentAddress::class, 'registered_agent_address_id');
     }
 }

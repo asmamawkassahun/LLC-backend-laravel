@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Company extends Model
 {
     protected $fillable = [
-        'user_id',
+        'company_owner_ids',
         'order_id',
         'name',
         'type',
@@ -33,12 +33,8 @@ class Company extends Model
             'formed_at' => 'datetime',
             'is_primary' => 'boolean',
             'category' => 'array',
+            'company_owner_ids' => 'array',
         ];
-    }
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 
     public function order(): BelongsTo

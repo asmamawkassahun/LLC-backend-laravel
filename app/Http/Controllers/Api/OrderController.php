@@ -62,7 +62,7 @@ class OrderController extends Controller
                 'pricingPlan',
                 'company',
                 'company.owners',
-                'company.addresses',
+                'company.addresses.registeredAgentAddress',
                 'company.country',
                 'company.state',
                 'company.service',
@@ -87,7 +87,7 @@ class OrderController extends Controller
             'pricingPlan',
             'company',
             'company.owners',
-            'company.addresses',
+            'company.addresses.registeredAgentAddress',
             'company.country',
             'company.state',
             'company.service',
@@ -106,6 +106,7 @@ class OrderController extends Controller
 
     return response()->json([
         'data' => [
+            'id' => $address->id,
             'address' => $address->address,
             'city' => $address->city,
             'state' => $address->state,
