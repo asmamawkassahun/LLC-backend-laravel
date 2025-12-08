@@ -19,11 +19,25 @@ class AdminOrderController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $orders = Order::with(['user', 'country', 'pricingPlan', 'company', 'state', 'payments'])
-            ->latest()
-            ->paginate(20);
-
-        return response()->json(OrderResource::collection($orders));
+        $perPage = $request->input('per_page', 20);
+        $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
+        
+        $query = Order::with(['user', 'country', 'pricingPlan', 'company', 'state', 'payments']);
+        
+        // Filter by status if provided
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        
+        $orders = $query->latest()->paginate($perPage);
+    
+        return response()->json([
+            'data' => OrderResource::collection($orders->items()),
+            'current_page' => $orders->currentPage(),
+            'last_page' => $orders->lastPage(),
+            'per_page' => $orders->perPage(),
+            'total' => $orders->total(),
+        ]);
     }
 
     public function show($id): JsonResponse

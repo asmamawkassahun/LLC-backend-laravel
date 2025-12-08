@@ -15,11 +15,25 @@ class AdminCompanyController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $companies = Company::with(['user', 'country', 'state', 'owners', 'addresses', 'service'])
-            ->latest()
-            ->paginate(20);
+        $perPage = $request->input('per_page', 20);
+        $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
+        
+        $query = Company::with(['country', 'state', 'owners', 'addresses', 'service']);
+        
+        // Filter by status if provided
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        
+        $companies = $query->latest()->paginate($perPage);
 
-        return response()->json(CompanyResource::collection($companies));
+        return response()->json([
+            'data' => CompanyResource::collection($companies->items()),
+            'current_page' => $companies->currentPage(),
+            'last_page' => $companies->lastPage(),
+            'per_page' => $companies->perPage(),
+            'total' => $companies->total(),
+        ]);
     }
 
     public function show($id): JsonResponse

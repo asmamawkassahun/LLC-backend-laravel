@@ -12,11 +12,29 @@ class AdminUserController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $users = User::with('profile')
-            ->latest()
-            ->paginate(20);
+        $perPage = $request->input('per_page', 20);
+        $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
+        
+        $query = User::with('profile');
+        
+        // Filter by search if provided
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('email', 'like', '%' . $search . '%');
+            });
+        }
+        
+        $users = $query->latest()->paginate($perPage);
 
-        return response()->json(UserResource::collection($users));
+        return response()->json([
+            'data' => UserResource::collection($users->items()),
+            'current_page' => $users->currentPage(),
+            'last_page' => $users->lastPage(),
+            'per_page' => $users->perPage(),
+            'total' => $users->total(),
+        ]);
     }
 
     public function show($id): JsonResponse
