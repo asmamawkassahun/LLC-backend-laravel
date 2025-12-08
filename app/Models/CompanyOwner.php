@@ -30,4 +30,28 @@ class CompanyOwner extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Update order's updated_at when company owner is created or updated
+        static::created(function ($owner) {
+            if ($owner->company && $owner->company->order_id) {
+                $order = $owner->company->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+
+        static::updated(function ($owner) {
+            if ($owner->company && $owner->company->order_id) {
+                $order = $owner->company->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+    }
 }

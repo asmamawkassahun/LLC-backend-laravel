@@ -20,4 +20,19 @@ class Service extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Update order's updated_at when service is updated
+        static::updated(function ($service) {
+            if ($service->company && $service->company->order_id) {
+                $order = $service->company->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+    }
 }

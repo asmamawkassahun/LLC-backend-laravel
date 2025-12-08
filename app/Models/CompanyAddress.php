@@ -35,4 +35,28 @@ class CompanyAddress extends Model
     {
         return $this->belongsTo(registeredAgentAddress::class, 'registered_agent_address_id');
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Update order's updated_at when company address is created or updated
+        static::created(function ($address) {
+            if ($address->company && $address->company->order_id) {
+                $order = $address->company->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+
+        static::updated(function ($address) {
+            if ($address->company && $address->company->order_id) {
+                $order = $address->company->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+    }
 }

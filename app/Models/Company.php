@@ -66,4 +66,19 @@ class Company extends Model
     {
         return $this->hasOne(Service::class);
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Update order's updated_at when company is updated
+        static::updated(function ($company) {
+            if ($company->order_id) {
+                $order = $company->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+    }
 }

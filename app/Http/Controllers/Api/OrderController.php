@@ -32,7 +32,17 @@ class OrderController extends Controller
         $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
 
         $orders = $request->user()->orders()
-            ->with(['country', 'pricingPlan', 'company', 'company.service', 'state'])
+            ->with([
+                'country',
+                'pricingPlan',
+                'company',
+                'company.service',
+                'company.owners',
+                'company.addresses',
+                'state',
+                'payments',
+                'marketplaceOrders'
+            ])
             ->latest()
             ->paginate($perPage);
 

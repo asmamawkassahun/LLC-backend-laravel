@@ -46,4 +46,28 @@ class MarketplaceOrder extends Model
     {
         return $this->belongsTo(Company::class);
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Update order's updated_at when marketplace order is created or updated
+        static::created(function ($marketplaceOrder) {
+            if ($marketplaceOrder->order_id) {
+                $order = $marketplaceOrder->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+
+        static::updated(function ($marketplaceOrder) {
+            if ($marketplaceOrder->order_id) {
+                $order = $marketplaceOrder->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+    }
 }

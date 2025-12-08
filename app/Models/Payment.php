@@ -40,4 +40,28 @@ class Payment extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Update order's updated_at when payment is created or updated
+        static::created(function ($payment) {
+            if ($payment->order_id) {
+                $order = $payment->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+
+        static::updated(function ($payment) {
+            if ($payment->order_id) {
+                $order = $payment->order;
+                if ($order) {
+                    $order->touchQuietly();
+                }
+            }
+        });
+    }
 }
