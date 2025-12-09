@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\CompanyAddress;
 use App\Models\CompanyOwner;
 use App\Models\Country;
+use App\Models\MarketplaceOrder;
 use App\Models\Order;
 use App\Models\PricingPlan;
 use App\Models\PromoCode;
@@ -157,7 +158,7 @@ class OrderService
             
             if (isset($data['promo_code'])) {
                 $promoCode = PromoCode::where('code', $data['promo_code'])->first();
-                if ($promoCode && $this->isPromoCodeValid($promoCode, $subtotal)) {
+                if ($promoCode && $this->isPromoCodeValid($promoCode, $subtotal, $user->id)) {
                     $discountAmount = $this->calculateDiscount($promoCode, $subtotal);
                     $subtotal -= $discountAmount;
                 }
@@ -549,7 +550,7 @@ class OrderService
             // Handle promo code if provided
             if (isset($data['promo_code'])) {
                 $promoCode = PromoCode::where('code', $data['promo_code'])->first();
-                if ($promoCode && $this->isPromoCodeValid($promoCode, $subtotal)) {
+                if ($promoCode && $this->isPromoCodeValid($promoCode, $subtotal, $order->user_id)) {
                     $discountAmount = $this->calculateDiscount($promoCode, $subtotal);
                     $subtotal -= $discountAmount;
                 }
@@ -610,7 +611,22 @@ class OrderService
             throw new \Exception('Promo code not found');
         }
         
-        if (!$this->isPromoCodeValid($promoCode, $order->subtotal)) {
+        // Check if user has already used this promo code (in orders OR marketplace_orders)
+        if ($order->user_id) {
+            $hasUsedInOrders = Order::where('user_id', $order->user_id)
+                ->where('promo_code_id', $promoCode->id)
+                ->exists();
+            
+            $hasUsedInMarketplaceOrders = MarketplaceOrder::where('user_id', $order->user_id)
+                ->where('promo_code_id', $promoCode->id)
+                ->exists();
+            
+            if ($hasUsedInOrders || $hasUsedInMarketplaceOrders) {
+                throw new \Exception('You have already used this promo code');
+            }
+        }
+        
+        if (!$this->isPromoCodeValid($promoCode, $order->subtotal, $order->user_id)) {
             throw new \Exception('Promo code is not valid');
         }
         
@@ -654,7 +670,7 @@ class OrderService
         return $orderNumber;
     }
     
-    private function isPromoCodeValid(PromoCode $promoCode, float $subtotal): bool
+    public function isPromoCodeValid(PromoCode $promoCode, float $subtotal, ?int $userId = null): bool
     {
         if (!$promoCode->is_active) {
             return false;
@@ -672,10 +688,25 @@ class OrderService
             return false;
         }
         
+        // Check if user has already used this promo code (in orders OR marketplace_orders)
+        if ($userId) {
+            $hasUsedInOrders = Order::where('user_id', $userId)
+                ->where('promo_code_id', $promoCode->id)
+                ->exists();
+            
+            $hasUsedInMarketplaceOrders = MarketplaceOrder::where('user_id', $userId)
+                ->where('promo_code_id', $promoCode->id)
+                ->exists();
+            
+            if ($hasUsedInOrders || $hasUsedInMarketplaceOrders) {
+                return false; // User already used this code
+            }
+        }
+        
         return true;
     }
     
-    private function calculateDiscount(PromoCode $promoCode, float $subtotal): float
+    public function calculateDiscount(PromoCode $promoCode, float $subtotal): float
     {
         if ($promoCode->type === 'percentage') {
             $discount = ($subtotal * $promoCode->value) / 100;

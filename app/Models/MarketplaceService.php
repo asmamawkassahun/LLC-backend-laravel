@@ -9,10 +9,7 @@ class MarketplaceService extends Model
 {
     protected $fillable = [
         'name',
-        'slug',
-        'code',
         'description',
-        'full_description',
         'requirements',
         'price',
         'is_active',
@@ -21,7 +18,6 @@ class MarketplaceService extends Model
     protected function casts(): array
     {
         return [
-            'full_description' => 'array',
             'requirements' => 'array',
             'price' => 'decimal:2',
             'is_active' => 'boolean',

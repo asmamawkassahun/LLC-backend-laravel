@@ -11,6 +11,7 @@ class MarketplaceOrder extends Model
         'user_id',
         'order_id',
         'marketplace_service_id',
+        'promo_code_id',
         'company_id',
         'status',
         'requirements_met',
@@ -40,6 +41,11 @@ class MarketplaceOrder extends Model
     public function marketplaceService(): BelongsTo
     {
         return $this->belongsTo(MarketplaceService::class);
+    }
+
+    public function promoCode(): BelongsTo
+    {
+        return $this->belongsTo(PromoCode::class);
     }
 
     public function company(): BelongsTo

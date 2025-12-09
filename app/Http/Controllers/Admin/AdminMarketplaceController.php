@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\MarketplaceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class AdminMarketplaceController extends Controller
 {
@@ -18,9 +17,6 @@ class AdminMarketplaceController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        if ($request->has('code')) {
-            $query->where('code', 'like', '%' . $request->code . '%');
-        }
 
         $perPage = $request->input('per_page', 20);
         $services = $query->latest()->paginate($perPage);
@@ -38,15 +34,12 @@ class AdminMarketplaceController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:marketplace_services,name',
-            'code' => 'required|string|max:50|unique:marketplace_services,code',
             'description' => 'required|string',
-            'full_description' => 'nullable|array',
             'requirements' => 'nullable|array',
             'price' => 'required|numeric|min:0',
             'is_active' => 'boolean',
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']);
         $validated['is_active'] = $validated['is_active'] ?? true;
 
         $service = MarketplaceService::create($validated);
@@ -60,17 +53,11 @@ class AdminMarketplaceController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255|unique:marketplace_services,name,' . $id,
-            'code' => 'sometimes|string|max:50|unique:marketplace_services,code,' . $id,
             'description' => 'sometimes|string',
-            'full_description' => 'nullable|array',
             'requirements' => 'nullable|array',
             'price' => 'sometimes|numeric|min:0',
             'is_active' => 'sometimes|boolean',
         ]);
-
-        if (isset($validated['name'])) {
-            $validated['slug'] = Str::slug($validated['name']);
-        }
 
         $service->update($validated);
 

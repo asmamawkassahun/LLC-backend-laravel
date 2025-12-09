@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             RegisteredAgentAddressSeeder::class,
             ServicePricingSeeder::class, 
             SettingsSeeder::class,
+            PromoCodeSeeder::class,
             AdminUserSeeder::class,
         ]);
     }
