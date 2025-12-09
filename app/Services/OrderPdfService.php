@@ -193,6 +193,8 @@ class OrderPdfService
             'countryName' => $order->country ? $order->country->name : 'N/A',
             'userEmail' => $user ? $user->email : 'N/A',
             'paymentStatus' => $paymentStatusLabel,
+            'orderStatus' => $order->status ? $order->status->label() : 'N/A',
+            'companyStatus' => $company->status ? $company->status->label() : 'N/A',
             'company' => $company,
             'companyName' => $company ? $company->name : 'N/A',
             'companyAddressString' => $companyAddressString,

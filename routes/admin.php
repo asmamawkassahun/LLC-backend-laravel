@@ -46,6 +46,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::put('/companies/{id}/status', [AdminCompanyController::class, 'updateStatus']);
     Route::post('/companies/{id}/approve', [AdminCompanyController::class, 'approve']);
     Route::post('/companies/{id}/upload', [AdminCompanyController::class, 'uploadFile']);
+    Route::get('/companies/{id}/download-summary', [AdminCompanyController::class, 'downloadSummary']);
 
     // Support
     Route::get('/support/tickets', [AdminSupportController::class, 'index']);

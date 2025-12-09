@@ -6,13 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CompanyResource;
 use App\Models\Company;
 use App\Services\CompanyFormationService;
+use App\Services\OrderPdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use App\Enums\CompanyStatus;
 
 class AdminCompanyController extends Controller
 {
-    public function __construct(protected CompanyFormationService $companyFormationService) {}
+    public function __construct(
+        protected CompanyFormationService $companyFormationService,
+        protected OrderPdfService $orderPdfService
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -87,5 +92,32 @@ class AdminCompanyController extends Controller
             'file_name' => $file->getClientOriginalName(),
             'file_url' => asset('storage/' . $filePath),
         ]);
+    }
+
+    public function downloadSummary($id): Response
+    {
+        $company = Company::with(['order', 'order.country', 'order.pricingPlan', 'order.company', 'order.company.owners', 'order.company.addresses', 'order.state', 'order.payments'])
+            ->findOrFail($id);
+
+        if (!$company->order) {
+            return response()->json([
+                'message' => 'Company does not have an associated order'
+            ], 404);
+        }
+
+        try {
+            $pdf = $this->orderPdfService->generateOrderSummaryPdf($company->order);
+            
+            $filename = 'company-summary-' . $company->name . '-' . $company->id . '.pdf';
+            
+            return response($pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

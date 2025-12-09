@@ -173,7 +173,9 @@
             <p class="order-title">Order summary of {{ $pricingPlanName }} package</p>
             <p>Country of registration: <strong>{{ $countryName }}</strong></p>
             <p>E-mail: <strong>{{ $userEmail }}</strong></p>
-            <p>Order status: <span class="status-badge">{{ $paymentStatus }}</span></p>
+            <p>Payment status: <strong>{{ $paymentStatus }}</strong></p>
+            <p>Order status: <strong>{{ $orderStatus }}</strong></p>
+            <p>Company status: <strong>{{ $companyStatus }}</strong></p>
         </div>
         
         <!-- The company Section -->
