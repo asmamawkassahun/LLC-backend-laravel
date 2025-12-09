@@ -81,4 +81,31 @@ class AdminAuthController extends Controller
     {
         return response()->json(new AdminResource($request->user()));
     }
+
+    public function update(Request $request): JsonResponse
+    {
+        $admin = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:admins,email,' . $admin->id,
+            'password' => 'sometimes|nullable|string|min:8',
+        ]);
+
+        if (isset($validated['name'])) {
+            $admin->name = $validated['name'];
+        }
+
+        if (isset($validated['email'])) {
+            $admin->email = $validated['email'];
+        }
+
+        if (isset($validated['password']) && !empty($validated['password'])) {
+            $admin->password = Hash::make($validated['password']);
+        }
+
+        $admin->save();
+
+        return response()->json(new AdminResource($admin->fresh()));
+    }
 }
