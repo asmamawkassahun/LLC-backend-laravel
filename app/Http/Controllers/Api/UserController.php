@@ -8,7 +8,7 @@ use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
@@ -37,23 +37,30 @@ class UserController extends Controller
     {
         $user = $request->user();
 
-        // Verify current password
-        if (!Hash::check($request->current_password, $user->password)) {
+        // Verify current password by decrypting
+        try {
+            $decryptedPassword = Crypt::decryptString($user->password);
+            if ($decryptedPassword !== $request->current_password) {
             throw ValidationException::withMessages([
                 'current_password' => ['The current password is incorrect.'],
             ]);
         }
 
         // Check if new password is different from current password
-        if (Hash::check($request->password, $user->password)) {
+            if ($decryptedPassword === $request->password) {
+                throw ValidationException::withMessages([
+                    'password' => ['The new password must be different from your current password.'],
+                ]);
+            }
+        } catch (\Exception $e) {
             throw ValidationException::withMessages([
-                'password' => ['The new password must be different from your current password.'],
+                'current_password' => ['The current password is incorrect.'],
             ]);
         }
 
-        // Update password
+        // Update password (will be encrypted automatically by model setter)
         $user->update([
-            'password' => Hash::make($request->password)
+            'password' => $request->password
         ]);
 
         return response()->json([

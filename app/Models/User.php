@@ -6,6 +6,7 @@ use App\Notifications\VerifyEmailNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Crypt;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -47,9 +48,33 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Set the password attribute - encrypt it before saving
+     */
+    public function setPasswordAttribute($value)
+    {
+        if ($value !== null && $value !== '') {
+            $this->attributes['password'] = Crypt::encryptString($value);
+        } else {
+            // Don't update password if value is null or empty
+            unset($this->attributes['password']);
+        }
+    }
+
+    /**
+     * Get the decrypted password
+     */
+    public function getDecryptedPasswordAttribute()
+    {
+        try {
+            return Crypt::decryptString($this->attributes['password'] ?? '');
+        } catch (\Exception $e) {
+            return '';
+        }
     }
 
     /**

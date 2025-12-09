@@ -7,7 +7,6 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class AdminUserController extends Controller
@@ -59,14 +58,20 @@ class AdminUserController extends Controller
 
         $user = User::findOrFail($id);
         
+        // Update other fields
         $updateData = $request->only(['name', 'email', 'phone', 'country', 'is_active']);
+        $user->fill($updateData);
         
-        // Only update password if provided and not empty
-        if ($request->filled('password') && $request->password !== '') {
-            $updateData['password'] = Hash::make($request->password);
+        // Update password separately to ensure the setter is called
+        // Password will be encrypted automatically by the model's setPasswordAttribute
+        if ($request->filled('password')) {
+            $user->password = $request->password;
         }
         
-        $user->update($updateData);
+        $user->save();
+        
+        // Refresh the user from database to ensure we have the latest data
+        $user->refresh();
 
         return response()->json(new UserResource($user->load('profile')));
     }
