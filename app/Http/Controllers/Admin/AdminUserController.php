@@ -38,6 +38,35 @@ class AdminUserController extends Controller
         ]);
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'country' => ['nullable', 'string', 'max:100'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        // Password will be encrypted automatically by the model's setPasswordAttribute
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => $request->password,
+            'phone' => $request->phone,
+            'country' => $request->country,
+            'is_active' => $request->input('is_active', true), // Default to active
+        ]);
+
+        // Create user profile
+        $user->profile()->create([
+            'user_id' => $user->id,
+        ]);
+
+        return response()->json(new UserResource($user->load('profile')), 201);
+    }
+
     public function show($id): JsonResponse
     {
         $user = User::with('profile')->findOrFail($id);
