@@ -5,16 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PaymentResource;
 use App\Models\Payment;
-use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AdminPaymentController extends Controller
 {
-    public function __construct(
-        protected PaymentService $paymentService
-    ) {}
-
     public function index(Request $request): JsonResponse
     {
         $query = Payment::with(['order', 'user']);
@@ -54,25 +49,5 @@ class AdminPaymentController extends Controller
         $payment = Payment::with(['order', 'user'])->findOrFail($id);
 
         return response()->json(new PaymentResource($payment));
-    }
-
-    public function refund(Request $request, $id): JsonResponse
-    {
-        $request->validate([
-            'amount' => 'nullable|numeric|min:0.01',
-        ]);
-
-        $payment = Payment::with('order')->findOrFail($id);
-
-        try {
-            $refundedPayment = $this->paymentService->processRefund(
-                $payment->order,
-                $request->amount ?? $payment->amount
-            );
-
-            return response()->json(new PaymentResource($refundedPayment));
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
     }
 }

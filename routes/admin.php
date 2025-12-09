@@ -58,7 +58,6 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     // Payments
     Route::get('/payments', [AdminPaymentController::class, 'index']);
     Route::get('/payments/{id}', [AdminPaymentController::class, 'show']);
-    Route::post('/payments/{id}/refund', [AdminPaymentController::class, 'refund']);
 
     // Pricing Plans
     Route::get('/pricing-plans', [AdminPricingPlanController::class, 'index']);
