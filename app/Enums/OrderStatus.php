@@ -8,7 +8,7 @@ enum OrderStatus: string
     case PENDING_PAYMENT = 'pending_payment';
     case PAID = 'paid';
     case PENDING = 'pending';
-    case FORMED = 'formed';
+    case CONFIRMED = 'confirmed';
     case CANCELLED = 'cancelled';
 
     public function label(): string
@@ -18,7 +18,7 @@ enum OrderStatus: string
             self::PENDING_PAYMENT => 'Pending Payment',
             self::PAID => 'Paid',
             self::PENDING => 'Pending',
-            self::FORMED => 'Formed',
+            self::CONFIRMED => 'Confirmed',
             self::CANCELLED => 'Cancelled',
         };
     }

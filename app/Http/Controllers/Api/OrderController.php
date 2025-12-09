@@ -164,10 +164,10 @@ class OrderController extends Controller
             ], 422);
         }
         
-        // Prevent deletion of orders that are formed
-        if (in_array($order->status->value, ['formed'])) {
+        // Prevent deletion of orders that are confirmed
+        if (in_array($order->status->value, ['confirmed'])) {
             return response()->json([
-                'message' => 'Cannot delete orders that are formed.'
+                'message' => 'Cannot delete orders that are confirmed.'
             ], 422);
         }
         

@@ -633,8 +633,13 @@ class OrderService
     {
         $order->update(['status' => $status]);
         
-        if ($status === OrderStatus::FORMED) {
+        if ($status === OrderStatus::CONFIRMED) {
             $order->update(['completed_at' => now()]);
+            
+            // Update company status to FORMED when order is confirmed
+            if ($order->company) {
+                $order->company->update(['status' => CompanyStatus::FORMED]);
+            }
         } elseif ($status === OrderStatus::CANCELLED) {
             $order->update(['cancelled_at' => now()]);
         }

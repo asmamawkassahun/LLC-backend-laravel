@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Services\CompanyFormationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Enums\CompanyStatus;
 
 class AdminCompanyController extends Controller
 {
@@ -18,7 +19,7 @@ class AdminCompanyController extends Controller
         $perPage = $request->input('per_page', 20);
         $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
         
-        $query = Company::with(['country', 'state', 'owners', 'addresses', 'service']);
+        $query = Company::with(['country', 'state', 'owners', 'addresses', 'service'])->where('status', CompanyStatus::FORMED->value);
         
         // Filter by status if provided
         if ($request->has('status')) {
@@ -66,5 +67,25 @@ class AdminCompanyController extends Controller
         $this->companyFormationService->completeFormation($company);
 
         return response()->json(new CompanyResource($company->fresh()->load('service')));
+    }
+
+    public function uploadFile(Request $request, $id): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240', // Max 10MB
+        ]);
+
+        $company = Company::findOrFail($id);
+        
+        $file = $request->file('file');
+        $fileName = time() . '_' . $file->getClientOriginalName();
+        $filePath = $file->storeAs('companies/' . $company->id, $fileName, 'public');
+
+        return response()->json([
+            'message' => 'File uploaded successfully',
+            'file_path' => $filePath,
+            'file_name' => $file->getClientOriginalName(),
+            'file_url' => asset('storage/' . $filePath),
+        ]);
     }
 }

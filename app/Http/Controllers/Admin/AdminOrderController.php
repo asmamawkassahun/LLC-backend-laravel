@@ -26,7 +26,7 @@ class AdminOrderController extends Controller
         $perPage = $request->input('per_page', 20);
         $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
         
-        $query = Order::with(['country', 'pricingPlan', 'company', 'state', 'payments'])->where('status', '!=',OrderStatus::FORMED->value);
+        $query = Order::with(['country', 'pricingPlan', 'company', 'state', 'payments'])->where('status', '!=', OrderStatus::CONFIRMED->value);
         
         // Filter by status if provided
         if ($request->has('status')) {
@@ -55,7 +55,7 @@ class AdminOrderController extends Controller
     public function updateStatus(Request $request, $id): JsonResponse
     {
         $request->validate([
-            'status' => 'required|in:pending,pending_payment,paid,formed,cancelled',
+            'status' => 'required|in:pending,pending_payment,paid,confirmed,cancelled',
         ]);
 
         $order = Order::findOrFail($id);
