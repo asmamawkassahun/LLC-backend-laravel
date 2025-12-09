@@ -15,11 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('country_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->string('slug')->unique();
-            $table->string('type'); // basic, premium
+            // $table->string('slug')->unique();
+            $table->string('description'); 
             $table->decimal('base_price', 10, 2);
             $table->decimal('yearly_price', 10, 2);
-            $table->json('features');
+            // $table->json('features');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

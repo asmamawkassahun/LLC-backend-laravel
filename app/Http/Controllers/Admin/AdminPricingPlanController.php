@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PricingPlanResource;
 use App\Models\PricingPlan;
+use App\Models\Country;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -39,15 +40,21 @@ class AdminPricingPlanController extends Controller
     {
         $validated = $request->validate([
             'country_id' => 'required|exists:countries,id',
-            'name' => 'required|string|max:255',
-            'type' => 'required|string',
+            'type' => 'required|string|in:Premium,Basic',
             'base_price' => 'required|numeric|min:0',
             'yearly_price' => 'nullable|numeric|min:0',
-            'features' => 'nullable|array',
+            'description' => 'nullable|array',
+            'description.*' => 'string',
             'is_active' => 'boolean',
         ]);
 
-        $validated['slug'] = Str::slug($validated['name']);
+        // Get country to generate name
+        $country = Country::findOrFail($validated['country_id']);
+        
+        // Generate name from type and country code (e.g., "Basic_US" or "Premium_UK")
+        $countryCode = $this->getCountryCode($country->name);
+        $validated['name'] = $validated['type'] . '_' . $countryCode;
+        
         $validated['is_active'] = $validated['is_active'] ?? true;
 
         $plan = PricingPlan::create($validated);
@@ -61,21 +68,110 @@ class AdminPricingPlanController extends Controller
 
         $validated = $request->validate([
             'country_id' => 'sometimes|exists:countries,id',
-            'name' => 'sometimes|string|max:255',
-            'type' => 'sometimes|string',
+            'type' => 'sometimes|string|in:Premium,Basic',
             'base_price' => 'sometimes|numeric|min:0',
             'yearly_price' => 'nullable|numeric|min:0',
-            'features' => 'nullable|array',
+            'description' => 'nullable|array',
+            'description.*' => 'string',
             'is_active' => 'sometimes|boolean',
         ]);
 
-        if (isset($validated['name'])) {
-            $validated['slug'] = Str::slug($validated['name']);
+        // Regenerate name if type or country_id changed
+        if (isset($validated['type']) || isset($validated['country_id'])) {
+            $countryId = $validated['country_id'] ?? $plan->country_id;
+            $type = $validated['type'] ?? $this->extractTypeFromName($plan->name);
+            
+            $country = Country::findOrFail($countryId);
+            $countryCode = $this->getCountryCode($country->name);
+            $validated['name'] = $type . '_' . $countryCode;
         }
 
         $plan->update($validated);
 
         return response()->json(new PricingPlanResource($plan->fresh()->load('country')));
+    }
+
+    private function extractTypeFromName(string $name): string
+    {
+        // Extract type from name (e.g., "Basic_UK" -> "Basic")
+        $parts = explode('_', $name);
+        return $parts[0] ?? 'Basic';
+    }
+
+    private function getCountryCode(string $countryName): string
+    {
+        // Map common country names to their codes
+        $countryCodeMap = [
+            'United States' => 'us',
+            'United Kingdom' => 'uk',
+            'Canada' => 'CA',
+            'Australia' => 'AU',
+            'Germany' => 'DE',
+            'France' => 'FR',
+            'Italy' => 'IT',
+            'Spain' => 'ES',
+            'Netherlands' => 'NL',
+            'Belgium' => 'BE',
+            'Switzerland' => 'CH',
+            'Austria' => 'AT',
+            'Sweden' => 'SE',
+            'Norway' => 'NO',
+            'Denmark' => 'DK',
+            'Finland' => 'FI',
+            'Portugal' => 'PT',
+            'Ireland' => 'IE',
+            'Poland' => 'PL',
+            'Czech Republic' => 'CZ',
+            'Hungary' => 'HU',
+            'Romania' => 'RO',
+            'Greece' => 'GR',
+            'Russia' => 'RU',
+            'Japan' => 'JP',
+            'South Korea' => 'KR',
+            'China' => 'CN',
+            'India' => 'IN',
+            'Singapore' => 'SG',
+            'Malaysia' => 'MY',
+            'Thailand' => 'TH',
+            'Indonesia' => 'ID',
+            'Philippines' => 'PH',
+            'Vietnam' => 'VN',
+            'Hong Kong' => 'HK',
+            'New Zealand' => 'NZ',
+            'South Africa' => 'ZA',
+            'Brazil' => 'BR',
+            'Mexico' => 'MX',
+            'Argentina' => 'AR',
+            'Chile' => 'CL',
+            'Colombia' => 'CO',
+            'Peru' => 'PE',
+            'Turkey' => 'TR',
+            'Saudi Arabia' => 'SA',
+            'United Arab Emirates' => 'AE',
+            'Israel' => 'IL',
+            'Egypt' => 'EG',
+            'Nigeria' => 'NG',
+            'Kenya' => 'KE',
+            'Ghana' => 'GH',
+        ];
+
+        // Check if we have a mapping for this country
+        if (isset($countryCodeMap[$countryName])) {
+            return $countryCodeMap[$countryName];
+        }
+
+        // Fallback: Generate code from country name
+        // Take first 2 uppercase letters, or first letter of each word for multi-word countries
+        $words = explode(' ', $countryName);
+        if (count($words) > 1) {
+            // Multi-word country: take first letter of first two words
+            $code = strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
+        } else {
+            // Single word: take first 2 letters
+            $code = strtoupper(substr($countryName, 0, 2));
+        }
+
+        return $code;
     }
 
     public function destroy($id): JsonResponse

@@ -12,12 +12,9 @@ class PricingPlanResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'slug' => $this->slug,
-            'type' => $this->type?->value,
-            'type_label' => $this->type?->label(),
             'base_price' => $this->base_price,
             'yearly_price' => $this->yearly_price,
-            'features' => $this->features,
+            'description' => $this->description,
             'is_active' => $this->is_active,
             'country' => new CountryResource($this->whenLoaded('country')),
             'created_at' => $this->created_at,

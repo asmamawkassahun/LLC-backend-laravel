@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminActivityLogController;
 use App\Http\Controllers\Admin\AdminAffiliateController;
 use App\Http\Controllers\Admin\AdminCompanyController;
+use App\Http\Controllers\Admin\AdminCountryController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminMarketplaceController;
 use App\Http\Controllers\Admin\AdminOrderController;
@@ -58,6 +59,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     // Payments
     Route::get('/payments', [AdminPaymentController::class, 'index']);
     Route::get('/payments/{id}', [AdminPaymentController::class, 'show']);
+
+    // Countries
+    Route::get('/countries', [AdminCountryController::class, 'index']);
 
     // Pricing Plans
     Route::get('/pricing-plans', [AdminPricingPlanController::class, 'index']);

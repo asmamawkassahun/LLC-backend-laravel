@@ -12,21 +12,18 @@ class PricingPlan extends Model
     protected $fillable = [
         'country_id',
         'name',
-        'slug',
-        'type',
+        'description',
         'base_price',
         'yearly_price',
-        'features',
         'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'type' => PricingPlanType::class,
+            'description' => 'array',
             'base_price' => 'decimal:2',
             'yearly_price' => 'decimal:2',
-            'features' => 'array',
             'is_active' => 'boolean',
         ];
     }
