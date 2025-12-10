@@ -24,7 +24,7 @@ class AdminCompanyController extends Controller
         $perPage = $request->input('per_page', 20);
         $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
         
-        $query = Company::with(['country', 'state', 'owners', 'addresses', 'service'])->where('status', CompanyStatus::FORMED->value);
+        $query = Company::with(['country', 'state', 'owners', 'addresses'])->where('status', CompanyStatus::FORMED->value);
         
         // Filter by status if provided
         if ($request->has('status')) {
@@ -44,7 +44,7 @@ class AdminCompanyController extends Controller
 
     public function show($id): JsonResponse
     {
-        $company = Company::with(['user', 'country', 'state', 'owners', 'addresses', 'service'])
+        $company = Company::with(['user', 'country', 'state', 'owners', 'addresses'])
             ->findOrFail($id);
 
         return response()->json(new CompanyResource($company));
@@ -63,7 +63,7 @@ class AdminCompanyController extends Controller
             $this->companyFormationService->completeFormation($company, $request->only(['registration_number', 'ein']));
         }
 
-        return response()->json(new CompanyResource($company->fresh()->load('service')));
+        return response()->json(new CompanyResource($company->fresh()));
     }
 
     public function approve($id): JsonResponse
@@ -71,7 +71,7 @@ class AdminCompanyController extends Controller
         $company = Company::findOrFail($id);
         $this->companyFormationService->completeFormation($company);
 
-        return response()->json(new CompanyResource($company->fresh()->load('service')));
+        return response()->json(new CompanyResource($company->fresh()));
     }
 
     public function uploadFile(Request $request, $id): JsonResponse

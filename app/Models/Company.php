@@ -62,10 +62,6 @@ class Company extends Model
         return $this->hasMany(CompanyAddress::class);
     }
 
-    public function service(): HasOne
-    {
-        return $this->hasOne(Service::class);
-    }
 
     protected static function boot()
     {

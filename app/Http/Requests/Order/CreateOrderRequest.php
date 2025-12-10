@@ -43,12 +43,6 @@ class CreateOrderRequest extends FormRequest
             'addresses.*.state' => ['nullable', 'string', 'max:255'],
             'addresses.*.zip_code' => ['nullable', 'string', 'max:255'],
             'addresses.*.country' => ['nullable', 'string', 'max:255'],
-            'services' => ['nullable', 'array'],
-            'services.ein' => ['nullable', 'boolean'],
-            'services.itin' => ['nullable', 'boolean'],
-            'services.website' => ['nullable', 'boolean'],
-            'services.domainHosting' => ['nullable', 'boolean'],
-            'services.businessEmail' => ['nullable', 'boolean'],
             'promo_code' => ['nullable', 'string', 'exists:promo_codes,code'],
             'metadata' => ['nullable', 'array'],
         ];

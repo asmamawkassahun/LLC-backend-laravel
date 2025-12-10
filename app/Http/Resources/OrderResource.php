@@ -73,13 +73,6 @@ class OrderResource extends JsonResource
                 }
             }
 
-            // Check company service's updated_at if loaded
-            if ($this->company->relationLoaded('service') && $this->company->service) {
-                if ($this->company->service->updated_at && $this->company->service->updated_at->timestamp > $latestTimestamp) {
-                    $latestDate = $this->company->service->updated_at;
-                    $latestTimestamp = $latestDate->timestamp;
-                }
-            }
         }
 
         // Check payments' updated_at if loaded

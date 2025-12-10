@@ -36,7 +36,6 @@ class OrderController extends Controller
                 'country',
                 'pricingPlan',
                 'company',
-                'company.service',
                 'company.owners',
                 'company.addresses',
                 'state',
@@ -61,7 +60,7 @@ class OrderController extends Controller
 
         $this->notificationService->sendOrderNotification($order, 'order_created');
 
-        return response()->json(new OrderResource($order->load(['country', 'pricingPlan', 'company', 'company.service', 'state'])), 201);
+        return response()->json(new OrderResource($order->load(['country', 'pricingPlan', 'company', 'state'])), 201);
     }
 
     public function show(Request $request, $id): JsonResponse
@@ -75,7 +74,6 @@ class OrderController extends Controller
                 'company.addresses.registeredAgentAddress',
                 'company.country',
                 'company.state',
-                'company.service',
                 'state',
                 'payments'
             ])
@@ -100,7 +98,6 @@ class OrderController extends Controller
             'company.addresses.registeredAgentAddress',
             'company.country',
             'company.state',
-            'company.service',
             'state'
         ])));
     }

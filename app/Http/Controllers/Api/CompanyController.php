@@ -21,7 +21,7 @@ class CompanyController extends Controller
             ->unique();
 
         $companies = Company::whereIn('id', $companyIds)
-            ->with(['country', 'state', 'owners', 'addresses', 'service'])
+            ->with(['country', 'state', 'owners', 'addresses'])
             ->latest()
             ->paginate(15);
 
@@ -49,7 +49,7 @@ class CompanyController extends Controller
             }
         }
 
-        return response()->json(new CompanyResource($company->load(['country', 'state', 'owners', 'addresses', 'service'])), 201);
+        return response()->json(new CompanyResource($company->load(['country', 'state', 'owners', 'addresses'])), 201);
     }
 
     public function show(Request $request, $id): JsonResponse
@@ -61,7 +61,7 @@ class CompanyController extends Controller
             ->unique();
 
         $company = Company::whereIn('id', $companyIds)
-            ->with(['country', 'state', 'owners', 'addresses', 'service'])
+            ->with(['country', 'state', 'owners', 'addresses'])
             ->findOrFail($id);
 
         return response()->json(new CompanyResource($company));
@@ -89,7 +89,7 @@ class CompanyController extends Controller
             $company->update(['company_owner_ids' => $ownerIds]);
         }
 
-        return response()->json(new CompanyResource($company->load(['country', 'state', 'owners', 'addresses', 'service'])));
+        return response()->json(new CompanyResource($company->load(['country', 'state', 'owners', 'addresses'])));
     }
 
     public function setAsPrimary(Request $request, $id): JsonResponse
@@ -112,7 +112,7 @@ class CompanyController extends Controller
 
         return response()->json([
             'message' => 'Company set as primary successfully',
-            'company' => new CompanyResource($company->load(['country', 'state', 'owners', 'addresses', 'service'])),
+            'company' => new CompanyResource($company->load(['country', 'state', 'owners', 'addresses'])),
         ]);
     }
 }

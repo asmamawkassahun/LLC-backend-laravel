@@ -22,13 +22,6 @@ class CompanyResource extends JsonResource
             'state' => new StateResource($this->whenLoaded('state')),
             'owners' => CompanyOwnerResource::collection($this->whenLoaded('owners')),
             'addresses' => CompanyAddressResource::collection($this->whenLoaded('addresses')),
-            'service' => $this->whenLoaded('service') ? [
-                'ein' => $this->service->ein,
-                'itin' => $this->service->itin,
-                'website' => $this->service->website,
-                'domain_hosting' => $this->service->domain_hosting,
-                'business_email' => $this->service->business_email,
-            ] : null,
             'formed_at' => $this->formed_at,
             'is_primary' => $this->is_primary,
             'created_at' => $this->created_at,

@@ -167,7 +167,7 @@ class PaymentService
             'email' => $customerData['email'],
             'first_name' => $customerData['first_name'],
             'last_name' => $customerData['last_name'] ?? '',
-            'phone_number' => $customerData['phone_number'] ?? null,
+            // 'phone_number' => $customerData['phone_number'] ?? null,
             'tx_ref' => $txRef,
             'callback_url' => $appUrl . '/api/v1/payments/chapa/callback',
             'return_url' => $frontendUrl . '/payment/success?tx_ref=' . $txRef,
@@ -176,6 +176,11 @@ class PaymentService
                 'order_number' => $order->order_number,
             ],
         ];
+
+        // Only add phone_number if it exists and is not empty
+if (!empty($customerData['phone_number'])) {
+    $payload['phone_number'] = $customerData['phone_number'];
+}
         
         Log::info('Chapa payment initialization', ['order_id' => $order->id, 'tx_ref' => $txRef]);
         

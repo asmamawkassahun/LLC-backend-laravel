@@ -21,7 +21,6 @@ class DatabaseSeeder extends Seeder
             PricingPlansSeeder::class,
             MarketplaceServicesSeeder::class,
             RegisteredAgentAddressSeeder::class,
-            ServicePricingSeeder::class, 
             SettingsSeeder::class,
             PromoCodeSeeder::class,
             AdminUserSeeder::class,
