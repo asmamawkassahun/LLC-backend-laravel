@@ -9,10 +9,12 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Admin\AdminMaintenanceController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     // Public routes
+    Route::get('/maintenance/status', [AdminMaintenanceController::class, 'status']);
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/refresh', [AuthController::class, 'refresh']);

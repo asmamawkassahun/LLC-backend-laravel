@@ -27,6 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle.orders' => \App\Http\Middleware\RateLimitOrders::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
+        
+        // Exclude admin routes and maintenance status endpoint from maintenance mode
+        $middleware->preventRequestsDuringMaintenance(except: [
+            'api/admin/*',
+            'api/v1/maintenance/status',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

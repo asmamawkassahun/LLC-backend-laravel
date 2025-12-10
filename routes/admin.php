@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminPaymentController;
 use App\Http\Controllers\Admin\AdminPricingPlanController;
 use App\Http\Controllers\Admin\AdminPromoCodeController;
+use App\Http\Controllers\Admin\AdminMaintenanceController;
 use App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\Admin\AdminSupportController;
 use App\Http\Controllers\Admin\AdminUserController;
@@ -107,5 +108,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     // Activity Logs
     Route::get('/activity-logs', [AdminActivityLogController::class, 'index']);
     Route::get('/activity-logs/{id}', [AdminActivityLogController::class, 'show']);
+
+    // Maintenance Mode
+    Route::get('/maintenance/status', [AdminMaintenanceController::class, 'status']);
+    Route::post('/maintenance/enable', [AdminMaintenanceController::class, 'enable']);
+    Route::post('/maintenance/disable', [AdminMaintenanceController::class, 'disable']);
 });
 
