@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceService;
+use App\Models\MarketplaceOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -86,5 +87,41 @@ class AdminMarketplaceController extends Controller
         $service->update(['is_active' => !$service->is_active]);
 
         return response()->json($service->fresh());
+    }
+
+    public function orders(Request $request): JsonResponse
+    {
+        $perPage = $request->input('per_page', 20);
+        $perPage = min(max((int) $perPage, 1), 100); // Limit between 1 and 100
+
+        $query = MarketplaceOrder::with([
+            'user',
+            'order',
+            'company',
+            'marketplaceService',
+            'promoCode'
+        ]);
+
+        // Filter by status if provided
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by company status if provided
+        if ($request->has('company_status')) {
+            $query->whereHas('company', function ($q) use ($request) {
+                $q->where('status', $request->company_status);
+            });
+        }
+
+        $orders = $query->latest()->paginate($perPage);
+
+        return response()->json([
+            'data' => $orders->items(),
+            'current_page' => $orders->currentPage(),
+            'last_page' => $orders->lastPage(),
+            'per_page' => $orders->perPage(),
+            'total' => $orders->total(),
+        ]);
     }
 }

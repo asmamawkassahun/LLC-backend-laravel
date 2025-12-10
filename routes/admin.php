@@ -85,6 +85,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::put('/marketplace/services/{id}', [AdminMarketplaceController::class, 'update']);
     Route::delete('/marketplace/services/{id}', [AdminMarketplaceController::class, 'destroy']);
     Route::post('/marketplace/services/{id}/toggle-status', [AdminMarketplaceController::class, 'toggleStatus']);
+    Route::get('/marketplace/orders', [AdminMarketplaceController::class, 'orders']);
 
     // Affiliates
     Route::get('/affiliates', [AdminAffiliateController::class, 'index']);
