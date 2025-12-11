@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\PricingPlanType;
 use App\Models\Country;
 use App\Models\PricingPlan;
 use Illuminate\Database\Seeder;
@@ -11,19 +10,19 @@ class PricingPlansSeeder extends Seeder
 {
     public function run(): void
     {
-        $us = Country::where('code', 'US')->first();
-        $uk = Country::where('code', 'UK')->first();
+        $us = Country::where('name', 'United States')->first();
+        $uk = Country::where('name', 'United Kingdom')->first();
 
         if ($us) {
             PricingPlan::updateOrCreate(
-                ['slug' => 'basic-us'],
                 [
                     'country_id' => $us->id,
                     'name' => 'Basic US',
-                    'type' => PricingPlanType::BASIC,
-                    'base_price' => 229.00,
-                    'yearly_price' => 99.00,
-                    'features' => [
+                ],
+                [
+                    'country_id' => $us->id,
+                    'name' => 'Basic US',
+                    'description' => [
                         'US Company Formation',
                         'US Address with Mail forwarding',
                         'Registered agent service',
@@ -33,19 +32,21 @@ class PricingPlansSeeder extends Seeder
                         'Introduction to a professional accountant',
                         'Email support only',
                     ],
+                    'base_price' => 229.00,
+                    'yearly_price' => 99.00,
                     'is_active' => true,
                 ]
             );
 
             PricingPlan::updateOrCreate(
-                ['slug' => 'premium-us'],
                 [
                     'country_id' => $us->id,
                     'name' => 'Premium US',
-                    'type' => PricingPlanType::PREMIUM,
-                    'base_price' => 397.00,
-                    'yearly_price' => 99.00,
-                    'features' => [
+                ],
+                [
+                    'country_id' => $us->id,
+                    'name' => 'Premium US',
+                    'description' => [
                         'Everything in Basic, plus:',
                         'Order priority',
                         'FREE Tax consultation',
@@ -59,6 +60,8 @@ class PricingPlansSeeder extends Seeder
                         '3 Business logos',
                         'Bonuses',
                     ],
+                    'base_price' => 397.00,
+                    'yearly_price' => 99.00,
                     'is_active' => true,
                 ]
             );
@@ -66,14 +69,14 @@ class PricingPlansSeeder extends Seeder
 
         if ($uk) {
             PricingPlan::updateOrCreate(
-                ['slug' => 'basic-uk'],
                 [
                     'country_id' => $uk->id,
                     'name' => 'Basic UK',
-                    'type' => PricingPlanType::BASIC,
-                    'base_price' => 237.00,
-                    'yearly_price' => 59.00,
-                    'features' => [
+                ],
+                [
+                    'country_id' => $uk->id,
+                    'name' => 'Basic UK',
+                    'description' => [
                         'Your private company in the UK',
                         'Registered office address',
                         'UK Business Stripe account consultation',
@@ -81,19 +84,21 @@ class PricingPlansSeeder extends Seeder
                         'Company documents',
                         'Email support only',
                     ],
+                    'base_price' => 237.00,
+                    'yearly_price' => 59.00,
                     'is_active' => true,
                 ]
             );
 
             PricingPlan::updateOrCreate(
-                ['slug' => 'premium-uk'],
                 [
                     'country_id' => $uk->id,
                     'name' => 'Premium UK',
-                    'type' => PricingPlanType::PREMIUM,
-                    'base_price' => 337.00,
-                    'yearly_price' => 59.00,
-                    'features' => [
+                ],
+                [
+                    'country_id' => $uk->id,
+                    'name' => 'Premium UK',
+                    'description' => [
                         'Everything in Basic, plus:',
                         'Order priority',
                         'Chat and phone support',
@@ -106,6 +111,8 @@ class PricingPlansSeeder extends Seeder
                         '3 Business logos',
                         'Bonuses',
                     ],
+                    'base_price' => 337.00,
+                    'yearly_price' => 59.00,
                     'is_active' => true,
                 ]
             );

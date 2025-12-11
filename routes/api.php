@@ -64,6 +64,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/marketplace/services', [MarketplaceController::class, 'index']);
         Route::get('/marketplace/services/{id}', [MarketplaceController::class, 'show']);
         Route::get('/marketplace/orders', [MarketplaceController::class, 'orders']);
+        Route::post('/marketplace/validate-promo-code', [MarketplaceController::class, 'validatePromoCode']);
         Route::post('/marketplace/order', [MarketplaceController::class, 'order']);
 
         // Payments

@@ -75,31 +75,31 @@ class MarketplaceController extends Controller
             if (isset($validated['promo_code'])) {
                 $promoCode = PromoCode::where('code', $validated['promo_code'])->first();
                 
-                if ($promoCode) {
-                    // Check if user has already used this promo code in any order
-                    $hasUsedInOrders = Order::where('user_id', $user->id)
-                        ->where('promo_code_id', $promoCode->id)
-                        ->exists();
-                    
-                    if ($hasUsedInOrders) {
-                        return response()->json([
-                            'message' => 'You have already used this promo code'
-                        ], 422);
-                    }
-
-                    // Validate promo code (don't increment usage yet - will be done after payment success)
-                    if ($this->orderService->isPromoCodeValid($promoCode, $subtotal, $user->id)) {
-                        $discountAmount = $this->orderService->calculateDiscount($promoCode, $subtotal);
-                        $subtotal -= $discountAmount;
-                        // Note: Usage count will be incremented after payment is successful
-                    } else {
-                        return response()->json([
-                            'message' => 'Invalid or expired promo code'
-                        ], 422);
-                    }
-                } else {
+                if (!$promoCode) {
                     return response()->json([
                         'message' => 'Promo code not found'
+                    ], 404);
+                }
+
+                // Check if user has already used this promo code in any order
+                $hasUsedInOrders = Order::where('user_id', $user->id)
+                    ->where('promo_code_id', $promoCode->id)
+                    ->exists();
+                
+                if ($hasUsedInOrders) {
+                    return response()->json([
+                        'message' => 'You have already used this promo code'
+                    ], 422);
+                }
+
+                // Validate promo code (don't increment usage yet - will be done after payment success)
+                if ($this->orderService->isPromoCodeValid($promoCode, $subtotal, $user->id)) {
+                    $discountAmount = $this->orderService->calculateDiscount($promoCode, $subtotal);
+                    $subtotal -= $discountAmount;
+                    // Note: Usage count will be incremented after payment is successful
+                } else {
+                    return response()->json([
+                        'message' => 'Invalid or expired promo code'
                     ], 422);
                 }
             }
@@ -115,9 +115,9 @@ class MarketplaceController extends Controller
                 'company_id' => $primaryCompany->id,
                 'status' => 'pending',
                 'requirements_met' => false,
-                'promo_code_id' => $promoCode->id ?? null,
                 'discount_amount' => $discountAmount,
                 'total_amount' => $subtotal,
+                'promo_code' => $promoCode->code ?? null, // Store promo code as string, not ID
             ];
 
             // Initialize Chapa payment with order data (order will be created after payment success)
@@ -141,6 +141,59 @@ class MarketplaceController extends Controller
                 'tx_ref' => $paymentResult['tx_ref'],
             ], 201);
         });
+    }
+
+    /**
+     * Validate promo code for marketplace service
+     */
+    public function validatePromoCode(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'promo_code' => 'required|string',
+            'service_id' => 'required|exists:marketplace_services,id',
+        ]);
+
+        $user = $request->user();
+        $promoCode = PromoCode::where('code', $validated['promo_code'])->first();
+        
+        if (!$promoCode) {
+            return response()->json([
+                'message' => 'Promo code not found'
+            ], 404);
+        }
+
+        $service = MarketplaceService::findOrFail($validated['service_id']);
+        $subtotal = $service->price ?? 0;
+
+        // Check if user has already used this promo code in regular orders
+        $hasUsedInOrders = Order::where('user_id', $user->id)
+            ->where('promo_code_id', $promoCode->id)
+            ->exists();
+        
+        if ($hasUsedInOrders) {
+            return response()->json([
+                'message' => 'You have already used this promo code'
+            ], 422);
+        }
+
+        // Validate promo code
+        if (!$this->orderService->isPromoCodeValid($promoCode, $subtotal, $user->id)) {
+            return response()->json([
+                'message' => 'Invalid or expired promo code'
+            ], 422);
+        }
+
+        // Calculate discount
+        $discountAmount = $this->orderService->calculateDiscount($promoCode, $subtotal);
+        $totalAmount = $subtotal - $discountAmount;
+
+        return response()->json([
+            'message' => 'Promo code applied successfully',
+            'original_price' => $subtotal,
+            'discount_amount' => $discountAmount,
+            'total_amount' => $totalAmount,
+            'promo_code' => $promoCode->code,
+        ]);
     }
 
     /**

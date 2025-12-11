@@ -471,12 +471,12 @@ if (!empty($customerData['phone_number'])) {
                                     ]);
                                     
                                     // Increment promo code usage if applicable
-                                    if (isset($orderData['promo_code_id']) && $orderData['promo_code_id']) {
-                                        $promoCode = \App\Models\PromoCode::find($orderData['promo_code_id']);
+                                    if (isset($orderData['promo_code']) && $orderData['promo_code']) {
+                                        $promoCode = \App\Models\PromoCode::where('code', $orderData['promo_code'])->first();
                                         if ($promoCode) {
                                             $promoCode->increment('used_count');
                                             Log::info('Promo code usage incremented after successful payment', [
-                                                'promo_code_id' => $promoCode->id,
+                                                'promo_code' => $promoCode->code,
                                                 'service_order_number' => $orderData['service_order_number']
                                             ]);
                                         }
@@ -516,6 +516,29 @@ if (!empty($customerData['phone_number'])) {
                                     'payment_method' => 'chapa',
                                     'payment_reference' => $txRef,
                                 ]);
+                                
+                                // Increment promo code usage if applicable
+                                $orderMetadata = $order->metadata ?? [];
+                                if (isset($orderMetadata['promo_code']) && $orderMetadata['promo_code']) {
+                                    $promoCode = \App\Models\PromoCode::where('code', $orderMetadata['promo_code'])->first();
+                                    if ($promoCode) {
+                                        $promoCode->increment('used_count');
+                                        Log::info('Promo code usage incremented after successful payment', [
+                                            'promo_code' => $promoCode->code,
+                                            'order_id' => $order->id
+                                        ]);
+                                    }
+                                } elseif ($order->promo_code_id) {
+                                    // Fallback for old orders that still have promo_code_id
+                                    $promoCode = \App\Models\PromoCode::find($order->promo_code_id);
+                                    if ($promoCode) {
+                                        $promoCode->increment('used_count');
+                                        Log::info('Promo code usage incremented after successful payment (legacy)', [
+                                            'promo_code_id' => $promoCode->id,
+                                            'order_id' => $order->id
+                                        ]);
+                                    }
+                                }
                                 
                                 Log::info('Chapa payment verified successfully', [
                                     'payment_id' => $payment->id,

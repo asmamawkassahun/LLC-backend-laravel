@@ -12,6 +12,19 @@ class OrderResource extends JsonResource
         // Calculate the latest updated_at from all related data
         $latestUpdatedAt = $this->calculateLatestUpdatedAt();
 
+        // Calculate base_price from pricing plan or from subtotal
+        $basePrice = null;
+        if ($this->relationLoaded('pricingPlan') && $this->pricingPlan) {
+            $basePrice = $this->pricingPlan->base_price;
+        } else {
+            // Calculate from subtotal: base_price = subtotal + discount_amount - state_fee
+            $stateFee = 0;
+            if ($this->relationLoaded('state') && $this->state) {
+                $stateFee = $this->state->formation_fee ?? 0;
+            }
+            $basePrice = ($this->subtotal ?? 0) + ($this->discount_amount ?? 0) - $stateFee;
+        }
+
         return [
             'id' => $this->id,
             'order_number' => $this->order_number,
@@ -20,7 +33,7 @@ class OrderResource extends JsonResource
             'status_label' => $this->status?->label(),
             'payment_status' => $this->payment_status?->value,
             'payment_status_label' => $this->payment_status?->label(),
-            'base_price' => $this->base_price,
+            'base_price' => $basePrice,
             'discount_amount' => $this->discount_amount,
             'subtotal' => $this->subtotal,
             'tax_amount' => $this->tax_amount,

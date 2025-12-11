@@ -113,16 +113,24 @@ class OrderService
             $subtotal = $basePriceValue + $stateFee;
             $discountAmount = 0;
             
+            // Handle promo code if provided
+            $metadata = $data['metadata'] ?? [];
             if (isset($data['promo_code'])) {
                 $promoCode = PromoCode::where('code', $data['promo_code'])->first();
                 if ($promoCode && $this->isPromoCodeValid($promoCode, $subtotal, $user->id)) {
                     $discountAmount = $this->calculateDiscount($promoCode, $subtotal);
                     $subtotal -= $discountAmount;
+                    // Store promo code in metadata instead of promo_code_id
+                    $metadata['promo_code'] = $promoCode->code;
                 }
             }
             
             $taxAmount = 0; // Calculate tax if needed
             $totalAmount = $subtotal + $taxAmount;
+            
+            // Calculate base_price and state_fee for the order
+            $stateFee = $state ? ($state->formation_fee ?? 0) : 0;
+            $basePrice = $basePriceValue; // From pricing plan
             
             $order = Order::create([
                 'user_id' => $user->id,
@@ -132,14 +140,15 @@ class OrderService
                 'pricing_plan_id' => $pricingPlanId,
                 'state_id' => $stateId,
                 'company_id' => $companyId,
+                'base_price' => $basePrice,
+                'state_fee' => $stateFee,
                 'discount_amount' => $discountAmount,
-                'promo_code_id' => $promoCode->id ?? null,
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
                 'total_amount' => $totalAmount,
                 'status' => OrderStatus::PENDING,
                 'payment_status' => PaymentStatus::UNPAID,
-                'metadata' => $data['metadata'] ?? [],
+                'metadata' => $metadata,
             ]);
             
             // Step 6: Update company with order_id
@@ -458,6 +467,8 @@ class OrderService
                 'country_id' => $countryId,
                 'pricing_plan_id' => $pricingPlanId,
                 'state_id' => $stateId,
+                'base_price' => $basePriceValue,
+                'state_fee' => $stateFee,
                 'discount_amount' => $discountAmount,
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
@@ -504,17 +515,16 @@ class OrderService
             throw new \Exception('Promo code not found');
         }
         
-        // Check if user has already used this promo code (in orders OR marketplace_orders)
+        // Check if user has already used this promo code in regular orders
         if ($order->user_id) {
             $hasUsedInOrders = Order::where('user_id', $order->user_id)
-                ->where('promo_code_id', $promoCode->id)
+                ->where(function($query) use ($promoCode) {
+                    $query->where('promo_code_id', $promoCode->id)
+                          ->orWhereJsonContains('metadata->promo_code', $promoCode->code);
+                })
                 ->exists();
             
-            $hasUsedInMarketplaceOrders = MarketplaceOrder::where('user_id', $order->user_id)
-                ->where('promo_code_id', $promoCode->id)
-                ->exists();
-            
-            if ($hasUsedInOrders || $hasUsedInMarketplaceOrders) {
+            if ($hasUsedInOrders) {
                 throw new \Exception('You have already used this promo code');
             }
         }
@@ -525,15 +535,19 @@ class OrderService
         
         $discountAmount = $this->calculateDiscount($promoCode, $order->subtotal);
         
+        // Store promo code in metadata instead of promo_code_id
+        $metadata = $order->metadata ?? [];
+        $metadata['promo_code'] = $promoCode->code;
+        
         $order->update([
-            'promo_code_id' => $promoCode->id,
             'discount_amount' => $discountAmount,
+            'metadata' => $metadata,
         ]);
         
         $totals = $this->calculateTotal($order);
         $order->update($totals);
         
-        $promoCode->increment('used_count');
+        // Don't increment usage count here - will be done after payment success
         
         return $totals;
     }
@@ -581,17 +595,16 @@ class OrderService
             return false;
         }
         
-        // Check if user has already used this promo code (in orders OR marketplace_orders)
+        // Check if user has already used this promo code in regular orders
         if ($userId) {
             $hasUsedInOrders = Order::where('user_id', $userId)
-                ->where('promo_code_id', $promoCode->id)
+                ->where(function($query) use ($promoCode) {
+                    $query->where('promo_code_id', $promoCode->id)
+                          ->orWhereJsonContains('metadata->promo_code', $promoCode->code);
+                })
                 ->exists();
             
-            $hasUsedInMarketplaceOrders = MarketplaceOrder::where('user_id', $userId)
-                ->where('promo_code_id', $promoCode->id)
-                ->exists();
-            
-            if ($hasUsedInOrders || $hasUsedInMarketplaceOrders) {
+            if ($hasUsedInOrders) {
                 return false; // User already used this code
             }
         }

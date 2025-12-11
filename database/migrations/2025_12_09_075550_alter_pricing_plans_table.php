@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -35,8 +36,9 @@ return new class extends Migration
                 // Add description column as json if it doesn't exist
                 $table->json('description')->nullable()->after('name');
             } else {
-                // Change existing description column from string to json
-                $table->json('description')->nullable()->change();
+                // Change existing description column from string to json using raw SQL for PostgreSQL
+                DB::statement('ALTER TABLE pricing_plans ALTER COLUMN description TYPE json USING description::json');
+                DB::statement('ALTER TABLE pricing_plans ALTER COLUMN description DROP NOT NULL');
             }
         });
     }
