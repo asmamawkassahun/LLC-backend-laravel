@@ -60,6 +60,39 @@ return [
             'report' => false,
         ],
 
+        'minio' => [
+            'driver' => 's3',
+            'key' => env('MINIO_ACCESS_KEY'),
+            'secret' => env('MINIO_SECRET_KEY'),
+            'region' => env('MINIO_REGION', 'us-east-1'),
+            'bucket' => env('MINIO_BUCKET'),
+            'url' => (function() {
+                $publicUrl = rtrim(env('MINIO_PUBLIC_URL', ''), '/');
+                $bucket = env('MINIO_BUCKET', '');
+                return $publicUrl . '/' . $bucket;
+            })(),
+            'endpoint' => (function() {
+                $endpoint = env('MINIO_ENDPOINT', '');
+                $port = env('MINIO_PORT', 9000);
+                $useSsl = env('MINIO_USE_SSL', false);
+                
+                // Remove protocol if present
+                $endpoint = preg_replace('#^https?://#', '', $endpoint);
+                
+                // Construct endpoint with protocol
+                return ($useSsl ? 'https://' : 'http://') . $endpoint . ':' . $port;
+            })(),
+            'use_path_style_endpoint' => true,
+            'throw' => false,
+            'report' => false,
+            'options' => [
+                // Disable SSL verification if using self-signed certificates
+                'http' => [
+                    'verify' => env('MINIO_VERIFY_SSL', true) === 'true' || env('MINIO_VERIFY_SSL', true) === true,
+                ],
+            ],
+        ],
+
     ],
 
     /*

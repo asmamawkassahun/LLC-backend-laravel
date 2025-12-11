@@ -88,8 +88,6 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
-    public function marketplaceOrders(): HasMany
-    {
-        return $this->hasMany(MarketplaceOrder::class);
-    }
+    // Removed marketplaceOrders relationship - marketplace orders are now independent
+    // and no longer linked to regular orders via order_id
 }

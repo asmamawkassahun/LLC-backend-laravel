@@ -12,7 +12,7 @@ class AdminPaymentController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Payment::with(['order', 'user']);
+        $query = Payment::with(['order', 'marketplaceOrder', 'user']);
 
         // Filter by status
         if ($request->has('status')) {
@@ -46,7 +46,7 @@ class AdminPaymentController extends Controller
 
     public function show($id): JsonResponse
     {
-        $payment = Payment::with(['order', 'user'])->findOrFail($id);
+        $payment = Payment::with(['order', 'marketplaceOrder', 'user'])->findOrFail($id);
 
         return response()->json(new PaymentResource($payment));
     }

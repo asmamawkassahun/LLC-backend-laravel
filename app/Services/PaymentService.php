@@ -9,6 +9,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\MarketplaceOrder;
 use Illuminate\Support\Facades\DB;
 use Stripe\StripeClient;
 
@@ -245,6 +246,116 @@ if (!empty($customerData['phone_number'])) {
         }
     }
 
+    public function initializeChapaPaymentForMarketplace(array $orderData, array $customerData, float $totalAmount): array
+    {
+        $secretKey = config('services.chapa.secret_key');
+        if (!$secretKey) {
+            throw new \Exception('Chapa secret key not configured');
+        }
+        
+        $txRef = 'MPO_' . $orderData['service_order_number'] . '_' . time() . '_' . uniqid();
+        $amountInETB = $totalAmount * 55; // USD to ETB conversion
+
+        // Ensure config values are strings
+        $appUrl = config('app.url', 'http://localhost:8000');
+        $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+        
+        // Remove trailing slashes if present
+        $appUrl = rtrim($appUrl, '/');
+        $frontendUrl = rtrim($frontendUrl, '/');
+        
+        $payload = [
+            'amount' => round($amountInETB, 2),
+            'currency' => 'ETB',
+            'email' => $customerData['email'],
+            'first_name' => $customerData['first_name'],
+            'last_name' => $customerData['last_name'] ?? '',
+            'tx_ref' => $txRef,
+            'callback_url' => $appUrl . '/api/v1/payments/chapa/callback',
+            'return_url' => $frontendUrl . '/payment/success?tx_ref=' . $txRef,
+            'meta' => [
+                'order_data' => $orderData,
+                'service_order_number' => $orderData['service_order_number'],
+                'type' => 'marketplace_order',
+            ],
+        ];
+
+        // Only add phone_number if it exists and is not empty
+        if (!empty($customerData['phone_number'])) {
+            $payload['phone_number'] = $customerData['phone_number'];
+        }
+        
+        Log::info('Chapa payment initialization for marketplace order', ['service_order_number' => $orderData['service_order_number'], 'tx_ref' => $txRef]);
+        
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $secretKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(30)->post('https://api.chapa.co/v1/transaction/initialize', $payload);
+            
+            if ($response->successful()) {
+                $responseData = $response->json();
+                if (isset($responseData['status']) && $responseData['status'] === 'success') {
+                    $checkoutUrl = $responseData['data']['checkout_url'] ?? null;
+                    
+                    if (!$checkoutUrl) {
+                        Log::error('Chapa checkout URL missing for marketplace order', ['response' => $responseData]);
+                        throw new \Exception('Checkout URL not received from Chapa');
+                    }
+                    
+                    // Create payment record with order_id as null - order will be created after payment success
+                    $payment = Payment::create([
+                        'order_id' => null,
+                        'user_id' => $orderData['user_id'],
+                        'amount' => $totalAmount,
+                        'currency' => 'USD',
+                        'payment_method' => 'chapa',
+                        'payment_provider' => 'chapa',
+                        'transaction_id' => $txRef,
+                        'status' => PaymentStatus::PENDING,
+                        'metadata' => [
+                            'order_data' => $orderData,
+                            'service_order_number' => $orderData['service_order_number'],
+                            'checkout_url' => $checkoutUrl,
+                            'chapa_response' => $responseData,
+                            'amount_etb' => $amountInETB,
+                            'type' => 'marketplace_order',
+                        ],
+                    ]);
+                    
+                    Log::info('Chapa payment initialized successfully for marketplace order', ['payment_id' => $payment->id, 'tx_ref' => $txRef]);
+                    
+                    return [
+                        'checkout_url' => $checkoutUrl,
+                        'payment_id' => $payment->id,
+                        'tx_ref' => $txRef,
+                    ];
+                } else {
+                    $errorMessage = $responseData['message'] ?? 'Failed to initialize Chapa payment';
+                    Log::error('Chapa initialization failed for marketplace order', [
+                        'service_order_number' => $orderData['service_order_number'],
+                        'response' => $responseData
+                    ]);
+                    throw new \Exception($errorMessage);
+                }
+            } else {
+                $errorMessage = $response->json('message') ?? 'Failed to initialize Chapa payment';
+                Log::error('Chapa payment initialization HTTP error for marketplace order', [
+                    'service_order_number' => $orderData['service_order_number'],
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+                throw new \Exception($errorMessage);
+            }
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('Chapa connection error for marketplace order', ['service_order_number' => $orderData['service_order_number'] ?? 'unknown', 'error' => $e->getMessage()]);
+            throw new \Exception('Failed to connect to Chapa payment gateway. Please try again.');
+        } catch (\Exception $e) {
+            Log::error('Chapa payment initialization exception for marketplace order', ['service_order_number' => $orderData['service_order_number'] ?? 'unknown', 'error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
     public function verifyChapaPayment(string $txRef): ?Payment
     {
         return DB::transaction(function () use ($txRef) {
@@ -309,32 +420,111 @@ if (!empty($customerData['phone_number'])) {
                                 'paid_at' => now(),
                             ]);
                             
-                            $order = $payment->order;
-                            if (!$order) {
-                                Log::error('Order not found for payment', ['payment_id' => $payment->id]);
-                                return null;
-                            }
+                            // Check if this is a marketplace order payment
+                            $metadata = $payment->metadata ?? [];
+                            $isMarketplaceOrder = isset($metadata['type']) && $metadata['type'] === 'marketplace_order';
                             
-                            if ($order->payment_status->value === 'paid') {
-                                Log::info('Order already paid', ['order_id' => $order->id]);
+                            if ($isMarketplaceOrder && isset($metadata['order_data'])) {
+                                // Create marketplace order after successful payment
+                                $orderData = $metadata['order_data'];
+                                
+                                // Check if order already exists (in case of duplicate callbacks)
+                                $existingOrder = MarketplaceOrder::where('service_order_number', $orderData['service_order_number'])->first();
+                                
+                                if ($existingOrder) {
+                                    if ($existingOrder->status === 'pending') {
+                                        Log::info('Marketplace order already created and pending', [
+                                            'marketplace_order_id' => $existingOrder->id,
+                                            'service_order_number' => $orderData['service_order_number']
+                                        ]);
+                                        return $payment;
+                                    }
+                                    
+                                    // Update existing order status
+                                    $existingOrder->update(['status' => 'pending']);
+                                    
+                                    // Update payment with marketplace_order_id if not already set
+                                    if (!$payment->marketplace_order_id) {
+                                        $payment->update([
+                                            'marketplace_order_id' => $existingOrder->id,
+                                        ]);
+                                    }
+                                    
+                                    Log::info('Marketplace order status updated to pending', [
+                                        'marketplace_order_id' => $existingOrder->id,
+                                        'service_order_number' => $orderData['service_order_number']
+                                    ]);
+                                } else {
+                                    // Create new marketplace order with status "pending" after payment
+                                    $marketplaceOrder = MarketplaceOrder::create([
+                                        'user_id' => $orderData['user_id'],
+                                        'service_order_number' => $orderData['service_order_number'],
+                                        'marketplace_service_id' => $orderData['marketplace_service_id'],
+                                        'company_id' => $orderData['company_id'],
+                                        'status' => 'pending',
+                                        'requirements_met' => $orderData['requirements_met'] ?? false,
+                                    ]);
+                                    
+                                    // Update payment with marketplace_order_id
+                                    $payment->update([
+                                        'marketplace_order_id' => $marketplaceOrder->id,
+                                    ]);
+                                    
+                                    // Increment promo code usage if applicable
+                                    if (isset($orderData['promo_code_id']) && $orderData['promo_code_id']) {
+                                        $promoCode = \App\Models\PromoCode::find($orderData['promo_code_id']);
+                                        if ($promoCode) {
+                                            $promoCode->increment('used_count');
+                                            Log::info('Promo code usage incremented after successful payment', [
+                                                'promo_code_id' => $promoCode->id,
+                                                'service_order_number' => $orderData['service_order_number']
+                                            ]);
+                                        }
+                                    }
+                                    
+                                    Log::info('Marketplace order created after successful payment with pending status', [
+                                        'marketplace_order_id' => $marketplaceOrder->id,
+                                        'service_order_number' => $orderData['service_order_number'],
+                                        'tx_ref' => $txRef
+                                    ]);
+                                }
+                                
+                                Log::info('Chapa payment verified successfully for marketplace order', [
+                                    'payment_id' => $payment->id,
+                                    'service_order_number' => $orderData['service_order_number'],
+                                    'tx_ref' => $txRef
+                                ]);
+                                
+                                return $payment;
+                            } else {
+                                // Handle regular order
+                                $order = $payment->order;
+                                if (!$order) {
+                                    Log::error('Order not found for payment', ['payment_id' => $payment->id]);
+                                    return null;
+                                }
+                                
+                                if ($order->payment_status->value === 'paid') {
+                                    Log::info('Order already paid', ['order_id' => $order->id]);
+                                    return $payment;
+                                }
+                                
+                                $order->update([
+                                    'payment_status' => PaymentStatus::PAID,
+                                    // 'status' => OrderStatus::PAID,
+                                    'paid_at' => now(),
+                                    'payment_method' => 'chapa',
+                                    'payment_reference' => $txRef,
+                                ]);
+                                
+                                Log::info('Chapa payment verified successfully', [
+                                    'payment_id' => $payment->id,
+                                    'order_id' => $order->id,
+                                    'tx_ref' => $txRef
+                                ]);
+                                
                                 return $payment;
                             }
-                            
-                            $order->update([
-                                'payment_status' => PaymentStatus::PAID,
-                                // 'status' => OrderStatus::PAID,
-                                'paid_at' => now(),
-                                'payment_method' => 'chapa',
-                                'payment_reference' => $txRef,
-                            ]);
-                            
-                            Log::info('Chapa payment verified successfully', [
-                                'payment_id' => $payment->id,
-                                'order_id' => $order->id,
-                                'tx_ref' => $txRef
-                            ]);
-                            
-                            return $payment;
                         } else {
                             // Payment exists but status is not "successful"
                             Log::warning('Chapa payment not successful', [

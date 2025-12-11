@@ -85,15 +85,8 @@ class OrderResource extends JsonResource
             }
         }
 
-        // Check marketplace orders' updated_at if loaded
-        if ($this->relationLoaded('marketplaceOrders')) {
-            foreach ($this->marketplaceOrders as $marketplaceOrder) {
-                if ($marketplaceOrder->updated_at && $marketplaceOrder->updated_at->timestamp > $latestTimestamp) {
-                    $latestDate = $marketplaceOrder->updated_at;
-                    $latestTimestamp = $latestDate->timestamp;
-                }
-            }
-        }
+        // Removed marketplace orders check - marketplace orders are now independent
+        // and no longer linked to regular orders
 
         return $latestDate;
     }

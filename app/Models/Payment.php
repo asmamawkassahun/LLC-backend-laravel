@@ -9,6 +9,7 @@ class Payment extends Model
 {
     protected $fillable = [
         'order_id',
+        'marketplace_order_id',
         'user_id',
         'amount',
         'currency',
@@ -34,6 +35,11 @@ class Payment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function marketplaceOrder(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrder::class);
     }
 
     public function user(): BelongsTo

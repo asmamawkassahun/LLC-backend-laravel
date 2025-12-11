@@ -39,8 +39,7 @@ class OrderController extends Controller
                 'company.owners',
                 'company.addresses',
                 'state',
-                'payments',
-                'marketplaceOrders'
+                'payments'
             ])
             ->latest()
             ->paginate($perPage);

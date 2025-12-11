@@ -48,7 +48,6 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('/companies/{id}', [AdminCompanyController::class, 'show']);
     Route::put('/companies/{id}/status', [AdminCompanyController::class, 'updateStatus']);
     Route::post('/companies/{id}/approve', [AdminCompanyController::class, 'approve']);
-    Route::post('/companies/{id}/upload', [AdminCompanyController::class, 'uploadFile']);
     Route::get('/companies/{id}/download-summary', [AdminCompanyController::class, 'downloadSummary']);
 
     // Support
@@ -86,6 +85,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::delete('/marketplace/services/{id}', [AdminMarketplaceController::class, 'destroy']);
     Route::post('/marketplace/services/{id}/toggle-status', [AdminMarketplaceController::class, 'toggleStatus']);
     Route::get('/marketplace/orders', [AdminMarketplaceController::class, 'orders']);
+    Route::post('/marketplace/orders/{id}/accept', [AdminMarketplaceController::class, 'acceptOrder']);
+    Route::post('/marketplace/orders/{id}/upload', [AdminMarketplaceController::class, 'uploadFile']);
+    Route::get('/marketplace/orders/{id}/files', [AdminMarketplaceController::class, 'getFiles']);
+    Route::delete('/marketplace/orders/{id}/files/{fileIndex}', [AdminMarketplaceController::class, 'deleteFile']);
 
     // Affiliates
     Route::get('/affiliates', [AdminAffiliateController::class, 'index']);

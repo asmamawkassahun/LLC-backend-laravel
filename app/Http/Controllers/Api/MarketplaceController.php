@@ -8,17 +8,21 @@ use App\Models\MarketplaceService;
 use App\Models\Order;
 use App\Models\PromoCode;
 use App\Services\OrderService;
+use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class MarketplaceController extends Controller
 {
     protected $orderService;
+    protected $paymentService;
 
-    public function __construct(OrderService $orderService)
+    public function __construct(OrderService $orderService, PaymentService $paymentService)
     {
         $this->orderService = $orderService;
+        $this->paymentService = $paymentService;
     }
 
     public function index(): JsonResponse
@@ -39,7 +43,6 @@ class MarketplaceController extends Controller
     {
         $validated = $request->validate([
             'service_id' => 'required|exists:marketplace_services,id',
-            'company_id' => 'nullable|exists:companies,id',
             'promo_code' => 'nullable|string|exists:promo_codes,code',
         ]);
 
@@ -47,58 +50,108 @@ class MarketplaceController extends Controller
         $service = MarketplaceService::findOrFail($validated['service_id']);
 
         return DB::transaction(function () use ($validated, $user, $service) {
+            // Get primary company for the user
+            $companyIds = $user->orders()
+                ->whereNotNull('company_id')
+                ->pluck('company_id')
+                ->unique();
+            
+            $primaryCompany = \App\Models\Company::whereIn('id', $companyIds)
+                ->where('is_primary', true)
+                ->first();
+            
+            if (!$primaryCompany) {
+                return response()->json([
+                    'message' => 'No primary company found. Please create a company first.'
+                ], 422);
+            }
+
             // Calculate subtotal
             $subtotal = $service->price ?? 0;
             $discountAmount = 0;
-            $promoCodeId = null;
+            $promoCode = null;
 
             // Handle promo code if provided
             if (isset($validated['promo_code'])) {
                 $promoCode = PromoCode::where('code', $validated['promo_code'])->first();
                 
                 if ($promoCode) {
-                    // Check if user has already used this promo code
+                    // Check if user has already used this promo code in any order
                     $hasUsedInOrders = Order::where('user_id', $user->id)
                         ->where('promo_code_id', $promoCode->id)
                         ->exists();
                     
-                    $hasUsedInMarketplaceOrders = MarketplaceOrder::where('user_id', $user->id)
-                        ->where('promo_code_id', $promoCode->id)
-                        ->exists();
-                    
-                    if ($hasUsedInOrders || $hasUsedInMarketplaceOrders) {
+                    if ($hasUsedInOrders) {
                         return response()->json([
                             'message' => 'You have already used this promo code'
                         ], 422);
                     }
 
-                    // Validate promo code
+                    // Validate promo code (don't increment usage yet - will be done after payment success)
                     if ($this->orderService->isPromoCodeValid($promoCode, $subtotal, $user->id)) {
                         $discountAmount = $this->orderService->calculateDiscount($promoCode, $subtotal);
                         $subtotal -= $discountAmount;
-                        $promoCodeId = $promoCode->id;
-                        
-                        // Increment usage count
-                        $promoCode->increment('used_count');
+                        // Note: Usage count will be incremented after payment is successful
+                    } else {
+                        return response()->json([
+                            'message' => 'Invalid or expired promo code'
+                        ], 422);
                     }
+                } else {
+                    return response()->json([
+                        'message' => 'Promo code not found'
+                    ], 422);
                 }
             }
 
-            // Create marketplace order
-            $marketplaceOrder = MarketplaceOrder::create([
+            // Generate unique service order number (will be used when order is created after payment)
+            $serviceOrderNumber = $this->generateServiceOrderNumber();
+
+            // Store order data in metadata - order will be created after payment success
+            $orderData = [
                 'user_id' => $user->id,
-                'order_id' => null, // Set this if you create an Order first
+                'service_order_number' => $serviceOrderNumber,
                 'marketplace_service_id' => $service->id,
-                'promo_code_id' => $promoCodeId,
-                'company_id' => $validated['company_id'] ?? null,
+                'company_id' => $primaryCompany->id,
                 'status' => 'pending',
                 'requirements_met' => false,
-            ]);
+                'promo_code_id' => $promoCode->id ?? null,
+                'discount_amount' => $discountAmount,
+                'total_amount' => $subtotal,
+            ];
+
+            // Initialize Chapa payment with order data (order will be created after payment success)
+            $paymentResult = $this->paymentService->initializeChapaPaymentForMarketplace(
+                $orderData,
+                [
+                    'email' => $user->email,
+                    'first_name' => $user->name ?? 'Customer',
+                    'last_name' => '',
+                    'phone_number' => $user->phone ?? null,
+                ],
+                $subtotal
+            );
 
             return response()->json([
-                'message' => 'Marketplace service ordered successfully',
-                'data' => $marketplaceOrder
+                'message' => 'Payment initialized successfully',
+                'discount_amount' => $discountAmount,
+                'total_amount' => $subtotal,
+                'checkout_url' => $paymentResult['checkout_url'],
+                'payment_id' => $paymentResult['payment_id'],
+                'tx_ref' => $paymentResult['tx_ref'],
             ], 201);
         });
+    }
+
+    /**
+     * Generate a unique service order number
+     */
+    private function generateServiceOrderNumber(): string
+    {
+        do {
+            $serviceOrderNumber = 'SVC-' . strtoupper(Str::random(10));
+        } while (MarketplaceOrder::where('service_order_number', $serviceOrderNumber)->exists());
+        
+        return $serviceOrderNumber;
     }
 }
