@@ -15,7 +15,13 @@ class NotificationController extends Controller
             ->latest()
             ->paginate(20);
 
-        return response()->json(NotificationResource::collection($notifications));
+        return response()->json([
+            'data' => NotificationResource::collection($notifications->items()),
+            'current_page' => $notifications->currentPage(),
+            'last_page' => $notifications->lastPage(),
+            'per_page' => $notifications->perPage(),
+            'total' => $notifications->total(),
+        ]);
     }
 
     public function markAsRead(Request $request, $id): JsonResponse

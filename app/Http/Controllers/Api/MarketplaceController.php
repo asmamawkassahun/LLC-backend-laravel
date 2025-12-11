@@ -81,25 +81,25 @@ class MarketplaceController extends Controller
                     ], 404);
                 }
 
-                // Check if user has already used this promo code in any order
-                $hasUsedInOrders = Order::where('user_id', $user->id)
-                    ->where('promo_code_id', $promoCode->id)
-                    ->exists();
-                
-                if ($hasUsedInOrders) {
-                    return response()->json([
-                        'message' => 'You have already used this promo code'
-                    ], 422);
-                }
+                    // Check if user has already used this promo code in any order
+                    $hasUsedInOrders = Order::where('user_id', $user->id)
+                        ->where('promo_code_id', $promoCode->id)
+                        ->exists();
+                    
+                    if ($hasUsedInOrders) {
+                        return response()->json([
+                            'message' => 'You have already used this promo code'
+                        ], 422);
+                    }
 
-                // Validate promo code (don't increment usage yet - will be done after payment success)
-                if ($this->orderService->isPromoCodeValid($promoCode, $subtotal, $user->id)) {
-                    $discountAmount = $this->orderService->calculateDiscount($promoCode, $subtotal);
-                    $subtotal -= $discountAmount;
-                    // Note: Usage count will be incremented after payment is successful
-                } else {
-                    return response()->json([
-                        'message' => 'Invalid or expired promo code'
+                    // Validate promo code (don't increment usage yet - will be done after payment success)
+                    if ($this->orderService->isPromoCodeValid($promoCode, $subtotal, $user->id)) {
+                        $discountAmount = $this->orderService->calculateDiscount($promoCode, $subtotal);
+                        $subtotal -= $discountAmount;
+                        // Note: Usage count will be incremented after payment is successful
+                    } else {
+                        return response()->json([
+                            'message' => 'Invalid or expired promo code'
                     ], 422);
                 }
             }

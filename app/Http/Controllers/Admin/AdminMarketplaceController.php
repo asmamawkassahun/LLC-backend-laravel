@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceService;
 use App\Models\MarketplaceOrder;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -355,6 +356,22 @@ class AdminMarketplaceController extends Controller
             'file' => $allFiles,
             'delivered_at' => now(),
         ]);
+        
+        // Send real-time notification to the user
+        try {
+            $notificationService = app(NotificationService::class);
+            $notificationService->sendMarketplaceFileNotification($order);
+            Log::info('Real-time notification sent for marketplace file upload', [
+                'order_id' => $order->id,
+                'user_id' => $order->user_id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send real-time notification', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            // Don't fail the request if notification fails
+        }
         
         // Log success
         Log::info('Files uploaded successfully', [

@@ -64,5 +64,37 @@ class NotificationService
             default => "Your order #{$order->order_number} has been updated.",
         };
     }
+    
+    public function sendMarketplaceFileNotification(\App\Models\MarketplaceOrder $order): Notification
+    {
+        // Load the marketplace service relationship if not already loaded
+        $order->loadMissing('marketplaceService');
+        
+        $notification = Notification::create([
+            'user_id' => $order->user_id,
+            'type' => 'marketplace_file_uploaded',
+            'title' => 'Document Provided',
+            'message' => 'A document has been uploaded for your marketplace order. Check your inbox.',
+            'data' => [
+                'marketplace_order_id' => $order->id,
+                'service_order_number' => $order->service_order_number,
+                'service_name' => $order->marketplaceService->name ?? 'Marketplace Service',
+            ],
+        ]);
+        
+        // Broadcast the notification in real-time
+        event(new \App\Events\MarketplaceFileUploaded([
+            'id' => $notification->id,
+            'user_id' => $notification->user_id,
+            'type' => $notification->type,
+            'title' => $notification->title,
+            'message' => $notification->message,
+            'data' => $notification->data,
+            'is_read' => $notification->is_read,
+            'created_at' => $notification->created_at->toISOString(),
+        ]));
+        
+        return $notification;
+    }
 }
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Admin\AdminMaintenanceController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 
 Route::prefix('v1')->group(function () {
     // Public routes
@@ -90,5 +91,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+        // Broadcasting authentication
+        Broadcast::routes(['middleware' => ['auth:sanctum']]);
     });
 });
