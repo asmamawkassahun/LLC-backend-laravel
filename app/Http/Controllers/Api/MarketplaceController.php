@@ -144,6 +144,60 @@ class MarketplaceController extends Controller
     }
 
     /**
+     * Get files from marketplace orders for the authenticated user
+     */
+    public function orders(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        $orders = MarketplaceOrder::where('user_id', $user->id)
+            ->with(['marketplaceService'])
+            ->select('id', 'service_order_number', 'status', 'created_at', 'delivered_at', 'file', 'marketplace_service_id')
+            ->latest()
+            ->get();
+        
+        // Extract and format all files from all orders
+        $allFiles = [];
+        
+        foreach ($orders as $order) {
+            if ($order->file && is_array($order->file)) {
+                foreach ($order->file as $fileData) {
+                    if (is_string($fileData)) {
+                        $fileUrl = \Illuminate\Support\Facades\Storage::disk('minio')->url($fileData);
+                        $allFiles[] = [
+                            'file_path' => $fileData,
+                            'file_name' => basename($fileData),
+                            'file_url' => $fileUrl,
+                            'order_id' => $order->id,
+                            'order_number' => $order->service_order_number,
+                            'order_status' => $order->status,
+                            'service_name' => $order->marketplaceService->name ?? 'Unknown Service',
+                            'order_date' => $order->delivered_at ? $order->delivered_at->toISOString() : ($order->created_at ? $order->created_at->toISOString() : null),
+                        ];
+                    } else {
+                        $fileUrl = \Illuminate\Support\Facades\Storage::disk('minio')->url($fileData['file_path']);
+                        $allFiles[] = [
+                            'file_path' => $fileData['file_path'],
+                            'file_name' => $fileData['file_name'] ?? basename($fileData['file_path']),
+                            'file_url' => $fileUrl,
+                            'uploaded_at' => $fileData['uploaded_at'] ?? null,
+                            'order_id' => $order->id,
+                            'order_number' => $order->service_order_number,
+                            'order_status' => $order->status,
+                            'service_name' => $order->marketplaceService->name ?? 'Unknown Service',
+                            'order_date' => $order->delivered_at ? $order->delivered_at->toISOString() : ($order->created_at ? $order->created_at->toISOString() : null),
+                        ];
+                    }
+                }
+            }
+        }
+        
+        return response()->json([
+            'data' => $allFiles,
+        ]);
+    }
+
+    /**
      * Generate a unique service order number
      */
     private function generateServiceOrderNumber(): string

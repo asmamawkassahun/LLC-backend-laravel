@@ -350,8 +350,11 @@ class AdminMarketplaceController extends Controller
         // Merge with existing files
         $allFiles = array_merge($currentFiles, $uploadedFiles);
         
-        // Update marketplace order with all file paths
-        $order->update(['file' => $allFiles]);
+        // Update marketplace order with all file paths and set delivered_at to current date
+        $order->update([
+            'file' => $allFiles,
+            'delivered_at' => now(),
+        ]);
         
         // Log success
         Log::info('Files uploaded successfully', [
