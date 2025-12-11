@@ -74,7 +74,7 @@ class NotificationService
             'user_id' => $order->user_id,
             'type' => 'marketplace_file_uploaded',
             'title' => 'Document Provided',
-            'message' => 'A document has been uploaded for your marketplace order. Check your inbox.',
+            'message' => "A document has been sent to you for your {$order->marketplaceService->name} order. Check your inbox.",
             'data' => [
                 'marketplace_order_id' => $order->id,
                 'service_order_number' => $order->service_order_number,
