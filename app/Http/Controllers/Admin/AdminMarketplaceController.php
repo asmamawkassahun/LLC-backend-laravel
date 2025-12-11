@@ -426,4 +426,30 @@ class AdminMarketplaceController extends Controller
         
         return response()->json(['message' => 'File not found'], 404);
     }
+
+    public function deleteOrder($id): JsonResponse
+    {
+        $order = MarketplaceOrder::findOrFail($id);
+        
+        // Delete associated files from MinIO if they exist
+        if ($order->file && is_array($order->file)) {
+            foreach ($order->file as $fileData) {
+                $filePath = is_string($fileData) ? $fileData : ($fileData['file_path'] ?? null);
+                if ($filePath) {
+                    try {
+                        Storage::disk('minio')->delete($filePath);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to delete file from MinIO', [
+                            'file_path' => $filePath,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+        }
+        
+        $order->delete();
+        
+        return response()->json(['message' => 'Marketplace order deleted successfully']);
+    }
 }

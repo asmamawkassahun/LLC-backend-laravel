@@ -89,6 +89,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::post('/marketplace/orders/{id}/upload', [AdminMarketplaceController::class, 'uploadFile']);
     Route::get('/marketplace/orders/{id}/files', [AdminMarketplaceController::class, 'getFiles']);
     Route::delete('/marketplace/orders/{id}/files/{fileIndex}', [AdminMarketplaceController::class, 'deleteFile']);
+    Route::delete('/marketplace/orders/{id}', [AdminMarketplaceController::class, 'deleteOrder']);
 
     // Affiliates
     Route::get('/affiliates', [AdminAffiliateController::class, 'index']);
