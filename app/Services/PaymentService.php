@@ -440,8 +440,11 @@ if (!empty($customerData['phone_number'])) {
                                         return $payment;
                                     }
                                     
-                                    // Update existing order status
-                                    $existingOrder->update(['status' => 'pending']);
+                                    // Update existing order status and amount
+                                    $existingOrder->update([
+                                        'status' => 'pending',
+                                        'amount' => $orderData['total_amount'] ?? null,
+                                    ]);
                                     
                                     // Update payment with marketplace_order_id if not already set
                                     if (!$payment->marketplace_order_id) {
@@ -460,6 +463,7 @@ if (!empty($customerData['phone_number'])) {
                                         'user_id' => $orderData['user_id'],
                                         'service_order_number' => $orderData['service_order_number'],
                                         'marketplace_service_id' => $orderData['marketplace_service_id'],
+                                        'amount' => $orderData['total_amount'] ?? null,
                                         'company_id' => $orderData['company_id'],
                                         'status' => 'pending',
                                         'requirements_met' => $orderData['requirements_met'] ?? false,

@@ -11,6 +11,7 @@ class MarketplaceOrder extends Model
         'user_id',
         'service_order_number',
         'marketplace_service_id',
+        'amount',
         'company_id',
         'status',
         'requirements_met',
@@ -22,6 +23,7 @@ class MarketplaceOrder extends Model
     protected function casts(): array
     {
         return [
+            'amount' => 'decimal:2',
             'requirements_met' => 'boolean',
             'delivered_at' => 'datetime',
             'metadata' => 'array',

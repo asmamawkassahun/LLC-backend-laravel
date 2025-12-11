@@ -179,10 +179,17 @@ public function verifyPayment(Request $request): JsonResponse
                     $this->notificationService->sendPaymentNotification($order, 'order_paid');
                 }
             }
+            
+            // Check if this is a marketplace order
+            $metadata = $verifiedPayment->metadata ?? [];
+            $isMarketplaceOrder = isset($metadata['type']) && $metadata['type'] === 'marketplace_order';
+            
             return response()->json([
                 'success' => true,
                 'payment_status' => $verifiedPayment->status->value,
-                'order_status' => $verifiedPayment->order->payment_status->value ?? null,
+                'order_status' => $verifiedPayment->order ? $verifiedPayment->order->payment_status->value : null,
+                'is_marketplace_order' => $isMarketplaceOrder,
+                'marketplace_order_id' => $isMarketplaceOrder ? $verifiedPayment->marketplace_order_id : null,
             ], 200);
         }
         
