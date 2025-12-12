@@ -491,6 +491,20 @@ if (!empty($customerData['phone_number'])) {
                                         'service_order_number' => $orderData['service_order_number'],
                                         'tx_ref' => $txRef
                                     ]);
+                                    
+                                    // Send notification for marketplace order creation
+                                    try {
+                                        $notificationService = app(NotificationService::class);
+                                        $notificationService->sendMarketplaceOrderCreatedNotification($marketplaceOrder);
+                                        Log::info('Marketplace order creation notification sent', [
+                                            'marketplace_order_id' => $marketplaceOrder->id,
+                                        ]);
+                                    } catch (\Exception $e) {
+                                        Log::error('Failed to send marketplace order creation notification', [
+                                            'marketplace_order_id' => $marketplaceOrder->id,
+                                            'error' => $e->getMessage(),
+                                        ]);
+                                    }
                                 }
                                 
                                 Log::info('Chapa payment verified successfully for marketplace order', [
