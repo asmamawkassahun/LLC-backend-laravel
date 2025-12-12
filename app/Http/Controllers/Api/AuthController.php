@@ -7,11 +7,14 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
+use App\Mail\PasswordResetMail;
 use App\Mail\WelcomeEmail;
+use App\Models\PasswordResetCode;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
@@ -223,5 +226,137 @@ class AuthController extends Controller
         $user->markEmailAsVerified();
 
         return response()->json(['message' => 'Email verified successfully']);
+    }
+
+    /**
+     * Send password reset code to user's email
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        // Always return success to prevent email enumeration
+        if (!$user) {
+            return response()->json([
+                'message' => 'If the email exists, a password reset code has been sent.',
+            ]);
+        }
+
+        // Invalidate any existing unused codes for this email
+        PasswordResetCode::where('email', $user->email)
+            ->where('used', false)
+            ->update(['used' => true]);
+
+        // Generate a 6-digit code
+        $code = str_pad((string) rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Create new reset code (expires in 15 minutes)
+        PasswordResetCode::create([
+            'email' => $user->email,
+            'code' => $code,
+            'expires_at' => Carbon::now()->addMinutes(15),
+            'used' => false,
+        ]);
+
+        // Send email with reset code
+        Mail::to($user->email)->send(new PasswordResetMail($code, $user->name));
+
+        return response()->json([
+            'message' => 'If the email exists, a password reset code has been sent.',
+        ]);
+    }
+
+    /**
+     * Verify password reset code (without resetting password)
+     */
+    public function verifyResetCode(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string|size:6',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Invalid email or code.',
+            ], 400);
+        }
+
+        // Find valid reset code
+        $resetCode = PasswordResetCode::where('email', $request->email)
+            ->where('code', $request->code)
+            ->where('used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->latest()
+            ->first();
+
+        if (!$resetCode) {
+            return response()->json([
+                'message' => 'Invalid or expired reset code.',
+            ], 400);
+        }
+
+        // Code is valid - return success (don't mark as used yet, will be marked when password is reset)
+        return response()->json([
+            'message' => 'Code verified successfully.',
+            'verified' => true,
+        ]);
+    }
+
+    /**
+     * Reset password using the verification code
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string|size:6',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Invalid email or code.',
+            ], 400);
+        }
+
+        // Find valid reset code
+        $resetCode = PasswordResetCode::where('email', $request->email)
+            ->where('code', $request->code)
+            ->where('used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->latest()
+            ->first();
+
+        if (!$resetCode) {
+            return response()->json([
+                'message' => 'Invalid or expired reset code.',
+            ], 400);
+        }
+
+        // Update password
+        $user->password = $request->password;
+        $user->save();
+
+        // Mark code as used
+        $resetCode->markAsUsed();
+
+        // Invalidate all other unused codes for this email
+        PasswordResetCode::where('email', $user->email)
+            ->where('used', false)
+            ->where('id', '!=', $resetCode->id)
+            ->update(['used' => true]);
+
+        return response()->json([
+            'message' => 'Password has been reset successfully. You can now login with your new password.',
+        ]);
     }
 }

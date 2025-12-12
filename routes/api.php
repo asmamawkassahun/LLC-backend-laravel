@@ -19,6 +19,9 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+    Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/auth/verify-reset-code', [AuthController::class, 'verifyResetCode']);
+    Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
     
     // Email verification route (public, but signed)
     Route::get('/auth/verify-email/{id}/{hash}', [AuthController::class, 'verify'])
@@ -41,6 +44,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/user', [UserController::class, 'show']);
         Route::put('/user', [UserController::class, 'update']);
         Route::put('/user/change-password', [UserController::class, 'changePassword']);
+        Route::post('/user/send-current-email-code', [UserController::class, 'sendCurrentEmailVerificationCode']);
+        Route::post('/user/verify-current-email-code', [UserController::class, 'verifyCurrentEmailCode']);
+        Route::put('/user/update-email', [UserController::class, 'updateEmail']);
+        Route::post('/user/send-new-email-code', [UserController::class, 'sendNewEmailVerificationCode']);
+        Route::post('/user/verify-new-email-code', [UserController::class, 'verifyNewEmailCode']);
 
         // Orders
         Route::get('/orders', [OrderController::class, 'index']);
