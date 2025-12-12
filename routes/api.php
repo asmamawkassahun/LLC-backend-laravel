@@ -52,6 +52,7 @@ Route::prefix('v1')->group(function () {
 
         // Orders
         Route::get('/orders', [OrderController::class, 'index']);
+        Route::get('/orders/primary-company', [OrderController::class, 'getPrimaryCompanyOrder']);
         Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle.orders');
         Route::get('/orders/{id}', [OrderController::class, 'show']);
         Route::put('/orders/{id}', [OrderController::class, 'update']);

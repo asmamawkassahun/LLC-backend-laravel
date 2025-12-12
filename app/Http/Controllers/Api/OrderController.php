@@ -122,6 +122,42 @@ class OrderController extends Controller
     ]);
 }
 
+    public function getPrimaryCompanyOrder(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        
+        // Get primary company order (order where company has is_primary = true)
+        $primaryOrder = $user->orders()
+            ->whereHas('company', function ($query) {
+                $query->where('is_primary', true);
+            })
+            ->whereNotNull('company_id')
+            ->with([
+                'country',
+                'pricingPlan',
+                'company',
+                'company.owners',
+                'company.addresses',
+                'company.country',
+                'company.state',
+                'state',
+                'payments'
+            ])
+            ->latest()
+            ->first();
+
+        if (!$primaryOrder) {
+            return response()->json([
+                'data' => null,
+                'message' => 'No primary company order found'
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => new OrderResource($primaryOrder)
+        ]);
+    }
+
     public function applyPromoCode(ApplyPromoCodeRequest $request, $id): JsonResponse
     {
         $order = $request->user()->orders()->findOrFail($id);
