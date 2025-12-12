@@ -141,13 +141,6 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
-    /**
-     * Get the user's activity logs.
-     */
-    public function activityLogs()
-    {
-        return $this->hasMany(ActivityLog::class);
-    }
 
     /**
      * Send the email verification notification.

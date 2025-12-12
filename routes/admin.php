@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminActivityLogController;
 use App\Http\Controllers\Admin\AdminAffiliateController;
 use App\Http\Controllers\Admin\AdminCompanyController;
 use App\Http\Controllers\Admin\AdminCountryController;
@@ -111,10 +110,6 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('/dashboard/recent-orders', [AdminDashboardController::class, 'recentOrders']);
     Route::get('/dashboard/recent-users', [AdminDashboardController::class, 'recentUsers']);
     Route::get('/dashboard/revenue-chart', [AdminDashboardController::class, 'revenueChart']);
-
-    // Activity Logs
-    Route::get('/activity-logs', [AdminActivityLogController::class, 'index']);
-    Route::get('/activity-logs/{id}', [AdminActivityLogController::class, 'show']);
 
     // Maintenance Mode
     Route::get('/maintenance/status', [AdminMaintenanceController::class, 'status']);
