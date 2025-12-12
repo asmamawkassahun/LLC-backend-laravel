@@ -91,8 +91,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-
-        // Broadcasting authentication
-        Broadcast::routes(['middleware' => ['auth:sanctum']]);
     });
+
+    // Broadcasting authentication - custom handler to support both User and Admin
+    // This must be outside the auth:sanctum middleware group so we can handle auth manually
+    Route::post('/broadcasting/auth', [\App\Http\Controllers\BroadcastingAuthController::class, 'authenticate']);
 });

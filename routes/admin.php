@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\AdminSupportController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Api\AdminAuthController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 
 // Public admin auth routes
 Route::prefix('admin')->group(function () {
@@ -56,6 +57,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::post('/support/tickets/{id}/assign', [AdminSupportController::class, 'assign']);
     Route::post('/support/tickets/{id}/reply', [AdminSupportController::class, 'reply']);
     Route::post('/support/tickets/{id}/resolve', [AdminSupportController::class, 'resolve']);
+    Route::get('/support/admins', [AdminSupportController::class, 'getAdmins']);
 
     // Payments
     Route::get('/payments', [AdminPaymentController::class, 'index']);
@@ -118,5 +120,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('/maintenance/status', [AdminMaintenanceController::class, 'status']);
     Route::post('/maintenance/enable', [AdminMaintenanceController::class, 'enable']);
     Route::post('/maintenance/disable', [AdminMaintenanceController::class, 'disable']);
+
+    // Broadcasting authentication for admins
+    Broadcast::routes(['middleware' => ['auth:sanctum', 'admin']]);
 });
 

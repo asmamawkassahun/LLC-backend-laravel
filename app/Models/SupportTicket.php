@@ -43,7 +43,7 @@ class SupportTicket extends Model
 
     public function assignedTo(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_to');
+        return $this->belongsTo(Admin::class, 'assigned_to');
     }
 
     public function messages(): HasMany
