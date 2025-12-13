@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminCompanyController;
 use App\Http\Controllers\Admin\AdminCountryController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminMarketplaceController;
+use App\Http\Controllers\Admin\AdminNotificationController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminPaymentController;
 use App\Http\Controllers\Admin\AdminPayoutController;
@@ -110,6 +111,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('/dashboard/recent-orders', [AdminDashboardController::class, 'recentOrders']);
     Route::get('/dashboard/recent-users', [AdminDashboardController::class, 'recentUsers']);
     Route::get('/dashboard/revenue-chart', [AdminDashboardController::class, 'revenueChart']);
+
+    // Notifications
+    Route::get('/notifications/counts', [AdminNotificationController::class, 'counts']);
 
     // Maintenance Mode
     Route::get('/maintenance/status', [AdminMaintenanceController::class, 'status']);
