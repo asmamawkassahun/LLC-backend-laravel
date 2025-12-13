@@ -48,6 +48,7 @@ class OrderResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'latest_updated_at' => $latestUpdatedAt,
+            'user' => new UserResource($this->whenLoaded('user')),
         ];
     }
 
