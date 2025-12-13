@@ -89,6 +89,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/referrals/register', [ReferralController::class, 'register']);
         Route::get('/referrals/dashboard', [ReferralController::class, 'dashboard']);
         Route::get('/referrals/commissions', [ReferralController::class, 'commissions']);
+        Route::get('/referrals/stats', [ReferralController::class, 'stats']);
+        Route::get('/referrals/link', [ReferralController::class, 'referralLink']);
+        Route::get('/referrals/bank-accounts', [ReferralController::class, 'bankAccounts']);
+        Route::post('/referrals/bank-accounts', [ReferralController::class, 'createBankAccount']);
+        Route::put('/referrals/bank-accounts/{id}', [ReferralController::class, 'updateBankAccount']);
+        Route::delete('/referrals/bank-accounts/{id}', [ReferralController::class, 'deleteBankAccount']);
+        Route::get('/referrals/payouts', [ReferralController::class, 'payouts']);
+        Route::post('/referrals/payouts/request', [ReferralController::class, 'requestPayout']);
 
         // Support
         Route::get('/support/tickets', [SupportController::class, 'index']);

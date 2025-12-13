@@ -27,6 +27,7 @@ class User extends Authenticatable
         'country',
         'timezone',
         'is_active',
+        'referral_code',
     ];
 
     /**

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminMarketplaceController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminPaymentController;
+use App\Http\Controllers\Admin\AdminPayoutController;
 use App\Http\Controllers\Admin\AdminPricingPlanController;
 use App\Http\Controllers\Admin\AdminPromoCodeController;
 use App\Http\Controllers\Admin\AdminMaintenanceController;
@@ -97,6 +98,12 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::put('/affiliates/{id}/status', [AdminAffiliateController::class, 'updateStatus']);
     Route::put('/affiliates/{id}/commission-rate', [AdminAffiliateController::class, 'updateCommissionRate']);
     Route::get('/affiliates/{id}/commissions', [AdminAffiliateController::class, 'commissions']);
+
+    // Payouts
+    Route::get('/payouts', [AdminPayoutController::class, 'index']);
+    Route::get('/payouts/{id}', [AdminPayoutController::class, 'show']);
+    Route::post('/payouts/{id}/approve', [AdminPayoutController::class, 'approve']);
+    Route::post('/payouts/{id}/reject', [AdminPayoutController::class, 'reject']);
 
     // Dashboard
     Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);

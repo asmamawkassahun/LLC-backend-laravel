@@ -10,6 +10,9 @@ use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\MarketplaceOrder;
+use App\Models\Affiliate;
+use App\Models\ReferralCommission;
+use App\Services\ReferralService;
 use Illuminate\Support\Facades\DB;
 use Stripe\StripeClient;
 
@@ -17,10 +20,12 @@ use Stripe\StripeClient;
 class PaymentService
 {
     protected ?StripeClient $stripe = null;
+    protected ReferralService $referralService;
     
-    public function __construct()
+    public function __construct(ReferralService $referralService)
     {
         // Don't initialize Stripe here - only initialize when needed
+        $this->referralService = $referralService;
     }
     
     protected function getStripeClient(): StripeClient
@@ -61,6 +66,8 @@ class PaymentService
                     'payment_method' => 'stripe',
                     'payment_reference' => $charge->id,
                 ]);
+                
+                // Commission will be processed when order status is confirmed
                 
                 return $payment;
             } catch (\Exception $e) {
@@ -535,6 +542,8 @@ if (!empty($customerData['phone_number'])) {
                                     'payment_reference' => $txRef,
                                 ]);
                                 
+                                // Commission will be processed when order status is confirmed
+                                
                                 // Increment promo code usage if applicable
                                 $orderMetadata = $order->metadata ?? [];
                                 if (isset($orderMetadata['promo_code']) && $orderMetadata['promo_code']) {
@@ -599,6 +608,56 @@ if (!empty($customerData['phone_number'])) {
             
             return null;
         });
+    }
+
+    /**
+     * Process referral commission when an order is paid AND confirmed
+     */
+    public function processReferralCommission(Order $order): void
+    {
+        try {
+            // Check if payment is paid
+            if ($order->payment_status !== PaymentStatus::PAID) {
+                return;
+            }
+
+            // Check if order is confirmed
+            if ($order->status !== OrderStatus::CONFIRMED) {
+                return;
+            }
+
+            // Check if the user was referred by an affiliate
+            if (!$order->user->referral_code) {
+                return;
+            }
+
+            // Find the affiliate by referral code
+            $affiliate = Affiliate::where('referral_code', $order->user->referral_code)
+                ->where('status', \App\Enums\AffiliateStatus::ACTIVE)
+                ->first();
+
+            if (!$affiliate) {
+                return;
+            }
+
+            // Check if commission already exists for this order
+            $existingCommission = ReferralCommission::where('order_id', $order->id)
+                ->where('affiliate_id', $affiliate->id)
+                ->first();
+
+            if ($existingCommission) {
+                return; // Commission already processed
+            }
+
+            // Process the commission
+            $this->referralService->processCommission($order, $affiliate);
+        } catch (\Exception $e) {
+            // Log error but don't fail the payment
+            Log::error('Failed to process referral commission', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
 }

@@ -58,6 +58,7 @@ class AuthController extends Controller
             'password' => $request->password,
             'phone' => $request->phone,
             'country' => $request->country,
+            'referral_code' => $request->referral_code,
         ]);
 
         // if ($request->has('profile')) {

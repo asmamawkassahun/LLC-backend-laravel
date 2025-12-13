@@ -41,4 +41,14 @@ class Affiliate extends Model
     {
         return $this->hasMany(ReferralCommission::class);
     }
+
+    public function bankAccounts(): HasMany
+    {
+        return $this->hasMany(BankAccount::class);
+    }
+
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(Payout::class);
+    }
 }

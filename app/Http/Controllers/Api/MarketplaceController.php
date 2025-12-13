@@ -201,53 +201,79 @@ class MarketplaceController extends Controller
      */
     public function orders(Request $request): JsonResponse
     {
-        $user = $request->user();
-        
-        $orders = MarketplaceOrder::where('user_id', $user->id)
-            ->with(['marketplaceService'])
-            ->select('id', 'service_order_number', 'status', 'created_at', 'delivered_at', 'file', 'marketplace_service_id')
-            ->latest()
-            ->get();
-        
-        // Extract and format all files from all orders
-        $allFiles = [];
-        
-        foreach ($orders as $order) {
-            if ($order->file && is_array($order->file)) {
-                foreach ($order->file as $fileData) {
-                    if (is_string($fileData)) {
-                        $fileUrl = \Illuminate\Support\Facades\Storage::disk('minio')->url($fileData);
-                        $allFiles[] = [
-                            'file_path' => $fileData,
-                            'file_name' => basename($fileData),
-                            'file_url' => $fileUrl,
-                            'order_id' => $order->id,
-                            'order_number' => $order->service_order_number,
-                            'order_status' => $order->status,
-                            'service_name' => $order->marketplaceService->name ?? 'Unknown Service',
-                            'order_date' => $order->delivered_at ? $order->delivered_at->toISOString() : ($order->created_at ? $order->created_at->toISOString() : null),
-                        ];
-                    } else {
-                        $fileUrl = \Illuminate\Support\Facades\Storage::disk('minio')->url($fileData['file_path']);
-                        $allFiles[] = [
-                            'file_path' => $fileData['file_path'],
-                            'file_name' => $fileData['file_name'] ?? basename($fileData['file_path']),
-                            'file_url' => $fileUrl,
-                            'uploaded_at' => $fileData['uploaded_at'] ?? null,
-                            'order_id' => $order->id,
-                            'order_number' => $order->service_order_number,
-                            'order_status' => $order->status,
-                            'service_name' => $order->marketplaceService->name ?? 'Unknown Service',
-                            'order_date' => $order->delivered_at ? $order->delivered_at->toISOString() : ($order->created_at ? $order->created_at->toISOString() : null),
-                        ];
+        try {
+            $user = $request->user();
+            
+            $orders = MarketplaceOrder::where('user_id', $user->id)
+                ->with(['marketplaceService'])
+                ->select('id', 'service_order_number', 'status', 'created_at', 'delivered_at', 'file', 'marketplace_service_id')
+                ->latest()
+                ->get();
+            
+            // Extract and format all files from all orders
+            $allFiles = [];
+            
+            foreach ($orders as $order) {
+                if ($order->file && is_array($order->file)) {
+                    foreach ($order->file as $fileData) {
+                        try {
+                            $filePath = is_string($fileData) ? $fileData : ($fileData['file_path'] ?? null);
+                            $fileName = is_string($fileData) ? basename($fileData) : ($fileData['file_name'] ?? basename($filePath ?? ''));
+                            
+                            if (!$filePath) {
+                                continue;
+                            }
+                            
+                            // Try to get URL from MinIO, fallback to null if it fails
+                            $fileUrl = null;
+                            try {
+                                $fileUrl = \Illuminate\Support\Facades\Storage::disk('minio')->url($filePath);
+                            } catch (\Exception $e) {
+                                // MinIO not available or file doesn't exist - continue without URL
+                                \Illuminate\Support\Facades\Log::warning('Failed to get MinIO URL', [
+                                    'file_path' => $filePath,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                            
+                            $allFiles[] = [
+                                'file_path' => $filePath,
+                                'file_name' => $fileName,
+                                'file_url' => $fileUrl,
+                                'uploaded_at' => is_array($fileData) ? ($fileData['uploaded_at'] ?? null) : null,
+                                'order_id' => $order->id,
+                                'order_number' => $order->service_order_number,
+                                'order_status' => $order->status,
+                                'service_name' => ($order->marketplaceService && $order->marketplaceService->name) ? $order->marketplaceService->name : 'Unknown Service',
+                                'order_date' => $order->delivered_at ? $order->delivered_at->toISOString() : ($order->created_at ? $order->created_at->toISOString() : null),
+                            ];
+                        } catch (\Exception $e) {
+                            // Skip this file if there's an error processing it
+                            \Illuminate\Support\Facades\Log::warning('Error processing file in marketplace order', [
+                                'order_id' => $order->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                            continue;
+                        }
                     }
                 }
             }
+            
+            return response()->json([
+                'data' => $allFiles,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error fetching marketplace orders', [
+                'user_id' => $request->user()->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to fetch marketplace orders',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred',
+            ], 500);
         }
-        
-        return response()->json([
-            'data' => $allFiles,
-        ]);
     }
 
     /**

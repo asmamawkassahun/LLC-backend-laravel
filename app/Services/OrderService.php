@@ -563,6 +563,11 @@ class OrderService
             if ($order->company) {
                 $order->company->update(['status' => CompanyStatus::FORMED]);
             }
+            
+            // Process referral commission when order is confirmed (and payment is paid)
+            if ($order->payment_status === PaymentStatus::PAID) {
+                app(\App\Services\PaymentService::class)->processReferralCommission($order);
+            }
         } elseif ($status === OrderStatus::CANCELLED) {
             $order->update(['cancelled_at' => now()]);
         }
