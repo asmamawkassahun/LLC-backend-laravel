@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
             'throttle.orders' => \App\Http\Middleware\RateLimitOrders::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'user.active' => \App\Http\Middleware\CheckUserStatus::class,
         ]);
         
         // Exclude admin routes and maintenance status endpoint from maintenance mode

@@ -32,7 +32,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/payments/chapa/callback', [PaymentController::class, 'chapaCallback']);
 
     // Protected routes
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'user.active'])->group(function () {
         // Authentication
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::post('/auth/logout-all', [AuthController::class, 'logoutAll']);

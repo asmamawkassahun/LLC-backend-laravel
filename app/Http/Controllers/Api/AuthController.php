@@ -92,6 +92,13 @@ class AuthController extends Controller
             ]);
         }
 
+        // Check if user account is active
+        if (!$user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => ['Your account has been suspended. Please contact support for assistance.'],
+            ]);
+        }
+
         // Decrypt and compare password
         try {
             $decryptedPassword = Crypt::decryptString($user->password);
