@@ -102,25 +102,39 @@ class OrderController extends Controller
     }
 
     public function getRegisteredAgentAddress(Request $request): JsonResponse
-{
-    $address = registeredAgentAddress::where('is_active', true)
-        ->first();
+    {
+        $countryName = $request->query('country');
+        
+        $query = registeredAgentAddress::with('country')
+            ->where('is_active', true);
+        
+        // Filter by country if provided
+        if ($countryName) {
+            $query->whereHas('country', function ($q) use ($countryName) {
+                $q->where('name', $countryName);
+            });
+        }
+        
+        $address = $query->first();
 
-    if (!$address) {
-        return response()->json(['message' => 'No active registered agent address found'], 404);
+        if (!$address) {
+            $message = $countryName 
+                ? "No active registered agent address found for {$countryName}"
+                : 'No active registered agent address found';
+            return response()->json(['message' => $message], 404);
+        }
+
+        return response()->json([
+            'data' => [
+                'id' => $address->id,
+                'address' => $address->address,
+                'city' => $address->city,
+                'state' => $address->state,
+                'postal_code' => $address->postal_code,
+                'country' => $address->country->name ?? null,
+            ]
+        ]);
     }
-
-    return response()->json([
-        'data' => [
-            'id' => $address->id,
-            'address' => $address->address,
-            'city' => $address->city,
-            'state' => $address->state,
-            'postal_code' => $address->postal_code,
-            'country' => $address->country,
-        ]
-    ]);
-}
 
     public function getPrimaryCompanyOrder(Request $request): JsonResponse
     {

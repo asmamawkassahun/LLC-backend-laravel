@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AdminPayoutController;
 use App\Http\Controllers\Admin\AdminPricingPlanController;
 use App\Http\Controllers\Admin\AdminPromoCodeController;
 use App\Http\Controllers\Admin\AdminMaintenanceController;
+use App\Http\Controllers\Admin\AdminRegisteredAgentAddressController;
 use App\Http\Controllers\Admin\AdminSupportController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Api\AdminAuthController;
@@ -119,6 +120,14 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('/maintenance/status', [AdminMaintenanceController::class, 'status']);
     Route::post('/maintenance/enable', [AdminMaintenanceController::class, 'enable']);
     Route::post('/maintenance/disable', [AdminMaintenanceController::class, 'disable']);
+
+    // Registered Agent Addresses
+    Route::get('/registered-agent-addresses', [AdminRegisteredAgentAddressController::class, 'index']);
+    Route::post('/registered-agent-addresses', [AdminRegisteredAgentAddressController::class, 'store']);
+    Route::get('/registered-agent-addresses/{id}', [AdminRegisteredAgentAddressController::class, 'show']);
+    Route::put('/registered-agent-addresses/{id}', [AdminRegisteredAgentAddressController::class, 'update']);
+    Route::delete('/registered-agent-addresses/{id}', [AdminRegisteredAgentAddressController::class, 'destroy']);
+    Route::post('/registered-agent-addresses/{id}/toggle-status', [AdminRegisteredAgentAddressController::class, 'toggleStatus']);
 
     // Broadcasting authentication for admins
     Broadcast::routes(['middleware' => ['auth:sanctum', 'admin']]);

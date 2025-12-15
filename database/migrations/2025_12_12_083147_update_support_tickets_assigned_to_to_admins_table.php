@@ -14,9 +14,9 @@ return new class extends Migration
     {
         // Drop the existing foreign key constraint if it exists
         try {
-            Schema::table('support_tickets', function (Blueprint $table) {
-                $table->dropForeign(['assigned_to']);
-            });
+        Schema::table('support_tickets', function (Blueprint $table) {
+            $table->dropForeign(['assigned_to']);
+        });
         } catch (\Exception $e) {
             // Foreign key might not exist, continue
         }

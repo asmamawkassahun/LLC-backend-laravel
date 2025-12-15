@@ -26,19 +26,19 @@ return new class extends Migration
                 ", [$constraintName]);
                 
                 if ($constraintExists) {
-                    $table->dropUnique(['slug']);
+            $table->dropUnique(['slug']);
                 }
-                $table->string('slug')->nullable()->change();
+            $table->string('slug')->nullable()->change();
             }
             
             // Only change features if column exists
             if (Schema::hasColumn('pricing_plans', 'features')) {
-                $table->json('features')->nullable()->change();
+            $table->json('features')->nullable()->change();
             }
             
             // Only change type if column exists
             if (Schema::hasColumn('pricing_plans', 'type')) {
-                $table->string('type')->nullable()->change();
+            $table->string('type')->nullable()->change();
             }
         });
     }

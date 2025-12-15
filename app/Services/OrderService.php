@@ -128,10 +128,6 @@ class OrderService
             $taxAmount = 0; // Calculate tax if needed
             $totalAmount = $subtotal + $taxAmount;
             
-            // Calculate base_price and state_fee for the order
-            $stateFee = $state ? ($state->formation_fee ?? 0) : 0;
-            $basePrice = $basePriceValue; // From pricing plan
-            
             $order = Order::create([
                 'user_id' => $user->id,
                 'order_number' => $orderNumber,
@@ -140,8 +136,6 @@ class OrderService
                 'pricing_plan_id' => $pricingPlanId,
                 'state_id' => $stateId,
                 'company_id' => $companyId,
-                'base_price' => $basePrice,
-                'state_fee' => $stateFee,
                 'discount_amount' => $discountAmount,
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
@@ -467,8 +461,6 @@ class OrderService
                 'country_id' => $countryId,
                 'pricing_plan_id' => $pricingPlanId,
                 'state_id' => $stateId,
-                'base_price' => $basePriceValue,
-                'state_fee' => $stateFee,
                 'discount_amount' => $discountAmount,
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,

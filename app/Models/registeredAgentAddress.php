@@ -13,7 +13,7 @@ class registeredAgentAddress extends Model
         'city',
         'state',
         'postal_code',
-        'country',
+        'country_id',
         'is_active',
     ];
 
@@ -27,5 +27,10 @@ class registeredAgentAddress extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function country(): BelongsTo
+    {
+        return $this->belongsTo(Country::class);
     }
 }
