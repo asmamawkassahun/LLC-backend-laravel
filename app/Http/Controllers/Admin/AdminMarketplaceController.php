@@ -21,9 +21,28 @@ class AdminMarketplaceController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
+        if ($request->has('country_id')) {
+            $query->whereJsonContains('country_id', (int)$request->country_id);
+        }
 
         $perPage = $request->input('per_page', 20);
         $services = $query->latest()->paginate($perPage);
+
+        // Load countries for each service
+        $services->getCollection()->transform(function ($service) {
+            // Handle different formats: array, integer, or null
+            $countryIds = [];
+            if (is_array($service->country_id)) {
+                $countryIds = $service->country_id;
+            } elseif (is_numeric($service->country_id)) {
+                $countryIds = [(int)$service->country_id];
+            }
+            
+            $service->countries = !empty($countryIds) 
+                ? \App\Models\Country::whereIn('id', $countryIds)->get()
+                : collect([]);
+            return $service;
+        });
 
         return response()->json([
             'data' => $services->items(),
@@ -42,6 +61,8 @@ class AdminMarketplaceController extends Controller
             'requirements' => 'nullable|array',
             'price' => 'required|numeric|min:0',
             'is_active' => 'boolean',
+            'country_id' => 'required|array|min:1',
+            'country_id.*' => 'required|exists:countries,id',
         ]);
 
         $validated['is_active'] = $validated['is_active'] ?? true;
@@ -61,6 +82,8 @@ class AdminMarketplaceController extends Controller
             'requirements' => 'nullable|array',
             'price' => 'sometimes|numeric|min:0',
             'is_active' => 'sometimes|boolean',
+            'country_id' => 'sometimes|array|min:1',
+            'country_id.*' => 'required|exists:countries,id',
         ]);
 
         $service->update($validated);

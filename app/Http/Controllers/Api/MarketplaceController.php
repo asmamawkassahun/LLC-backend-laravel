@@ -25,9 +25,30 @@ class MarketplaceController extends Controller
         $this->paymentService = $paymentService;
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $services = MarketplaceService::where('is_active', true)->get();
+        $user = $request->user();
+        
+        // Get primary company's country
+        $companyIds = $user->orders()
+            ->whereNotNull('company_id')
+            ->pluck('company_id')
+            ->unique();
+        
+        $primaryCompany = \App\Models\Company::whereIn('id', $companyIds)
+            ->where('is_primary', true)
+            ->with('country')
+            ->first();
+        
+        $query = MarketplaceService::where('is_active', true);
+        
+        // Filter by primary company's country if available
+        // Check if the service's country_id array contains the user's country
+        if ($primaryCompany && $primaryCompany->country_id) {
+            $query->whereJsonContains('country_id', $primaryCompany->country_id);
+        }
+        
+        $services = $query->get();
 
         return response()->json($services);
     }

@@ -11,17 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        
-        Schema::create('registered_agent_addresses', function (Blueprint $table) {
-            $table->id();
-            $table->string('address');
-            $table->string('city');
-            $table->string('state');
-            $table->string('postal_code');
-            $table->string('country');
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('registered_agent_addresses')) {
+            Schema::create('registered_agent_addresses', function (Blueprint $table) {
+                $table->id();
+                $table->string('address');
+                $table->string('city');
+                $table->string('state');
+                $table->string('postal_code');
+                $table->string('country');
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+            });
+        }
     }
 
     /**
