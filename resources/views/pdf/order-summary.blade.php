@@ -163,9 +163,17 @@
         <!-- Header -->
         <div class="header">
             <div class="logo">
-                LLC
+                <svg viewBox="0 0 48 48" style="width: 48px; height: 48px;">
+                    <rect x="2" y="2" width="44" height="44" rx="11" fill="#16294a"/>
+                    <g fill="none" stroke="#c9a24a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 15h20" />
+                        <path d="M14 33h20" />
+                        <path d="M18.5 15v18" />
+                        <path d="M29.5 15v18" />
+                    </g>
+                </svg>
             </div>
-            <div class="logo-text">privatily</div>
+            <div class="logo-text">Incorporia</div>
         </div>
         
         <!-- Order Information -->
