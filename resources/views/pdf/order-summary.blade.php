@@ -163,9 +163,9 @@
         <!-- Header -->
         <div class="header">
             <div class="logo">
-                <img src="https://app.privatily.com/assets/img/logo.png" alt="Logo" width="120" height="40">
+                LLC
             </div>
-            <!-- <div class="logo-text">privatily</div> -->
+            <div class="logo-text">privatily</div>
         </div>
         
         <!-- Order Information -->
