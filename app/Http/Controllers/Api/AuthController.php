@@ -71,7 +71,11 @@ class AuthController extends Controller
 
         $tokens = $this->generateTokens($user);
 
-        Mail::to($user->email)->send(new WelcomeEmail($user));
+        try {
+            Mail::to($user->email)->send(new WelcomeEmail($user));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Welcome email failed to send: '.$e->getMessage());
+        }
 
         return response()->json([
             'user' => new UserResource($user),
