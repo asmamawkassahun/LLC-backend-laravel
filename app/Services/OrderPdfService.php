@@ -44,6 +44,7 @@ class OrderPdfService
                 'width' => 1200,
                 'height' => 1600,
             ])
+            ->setOption('args', ['--no-sandbox', '--disable-setuid-sandbox'])
             ->margins(20, 20, 20, 20)
             ->format('A4');
 
